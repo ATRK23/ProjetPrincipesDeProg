@@ -33,3 +33,5 @@ docker compose up -d
 python -m uvicorn app.main:app --reload
 ```
 - Se rendre sur http://127.0.0.1:8000 et observer que le message ```{"message":"API restaurant OK"}``` apparaît
+
+- Se rendre sur http://127.0.0.1:8000/docs et tester les différentes routes disponibles
