@@ -10,4 +10,4 @@ class User(Base):
     email = Column(String(150), unique=True, index=True, nullable=False)
     phone = Column(String(20), nullable=True)
     adress = Column(String(255), nullable=True)
-    password_hash = Column(String(255), nullable=False)
+    hashed_password = Column(String(255), nullable=False)
