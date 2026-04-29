@@ -27,3 +27,5 @@ class RestaurantUpdate(BaseModel):
 class RestaurantResponse(RestaurantBase):
     id: int
     
+    class Config:
+        from_attributes = True
