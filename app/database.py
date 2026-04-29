@@ -9,7 +9,7 @@ load_dotenv()
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql://postgres:postgres@localhost:5432/restaurant_db"
+    "postgresql://postgres:postgres@localhost:5433/restaurant_db"
 )
 
 engine = create_engine(DATABASE_URL)
