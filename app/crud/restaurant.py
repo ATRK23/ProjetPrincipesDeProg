@@ -18,8 +18,8 @@ def get_restaurants(db: Session, skip: int = 0, limit: int = 100):
 def create_restaurant(db: Session, restaurant: RestaurantCreate):
     
     db_restaurant = Restaurant(
-        name=restaurant.username,
-        adress=restaurant.adress,
+        name=restaurant.name,
+        address=restaurant.address,
         phone=restaurant.phone,
         description=restaurant.description,
         is_open=restaurant.is_open
