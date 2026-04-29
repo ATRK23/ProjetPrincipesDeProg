@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, Boolean
+from sqlalchemy.orm import relationship
 
 from app.database import Base
 
@@ -11,3 +12,9 @@ class Restaurant(Base):
     phone = Column(String(30), nullable=True)
     description = Column(String(500), nullable=True)
     is_open = Column(Boolean, default=True, nullable=False)
+    
+    plats = relationship(
+        "Plat",
+        back_populates="restaurant",
+        cascade="all, delete-orphan"
+    )
