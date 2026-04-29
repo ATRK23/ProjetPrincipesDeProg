@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.schemas.user import UserCreate, UserResponse
+from app.schemas.user import UserCreate, UserResponse, UserUpdate
 from app.crud import user as user_crud
 
 router = APIRouter(
@@ -33,3 +33,45 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
 @router.get("/", response_model=List[UserResponse])
 def get_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     return user_crud.get_users(db, skip=skip, limit=limit)
+
+@router.get("/{user_id}", response_model=UserResponse)
+def get_user(user_id: int, db: Session = Depends(get_db)):
+    db_user = user_crud.get_user(db, user_id)
+    
+    if db_user is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Utilisateur introuvable"
+        )
+        
+    return db_user
+
+
+# Patch
+
+@router.patch("/{user_id}", response_model=UserResponse)
+def update_user(user_id: int, user_update: UserUpdate, db: Session = Depends(get_db)):
+    db_user = user_crud.get_user(db, user_id)
+    
+    if db_user is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Utilisateur Introuvable"
+        )
+        
+    return user_crud.update_user(db, db_user, user_update)
+
+
+# Delete
+
+@router.delete("/{user_id}", response_model=UserResponse)
+def delete_user(user_id: int, db: Session = Depends(get_db)):
+    db_user = user_crud.get_user(db, user_id)
+    
+    if db_user is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Utilisateur Introuvable"
+        )
+        
+    return user_crud.delete_user(db, db_user)
