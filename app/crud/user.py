@@ -30,7 +30,7 @@ def create_user(db: Session, user: UserCreate):
         username=user.username,
         email=user.email,
         phone=user.phone,
-        address=user.adress,
+        address=user.address,
         hashed_password=hashed_password
     )
     
