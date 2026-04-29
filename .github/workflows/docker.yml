@@ -1,0 +1,25 @@
+name: Docker Compose Check
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  compose:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build containers
+        run: docker compose build
+
+      - name: Start containers
+        run: docker compose up -d
+
+      - name: Check running containers
+        run: docker compose ps
+
+      - name: Stop containers
+        if: always()
+        run: docker compose down -v
