@@ -1,4 +1,6 @@
 from sqlalchemy import Column, Integer, String
+from sqlalchemy.orm import relationship
+
 from app.database import Base
 
 
@@ -11,3 +13,9 @@ class User(Base):
     phone = Column(String(20), nullable=True)
     address = Column(String(255), nullable=True)
     hashed_password = Column(String(255), nullable=False)
+    
+    commandes = relationship(
+        "Commande",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )

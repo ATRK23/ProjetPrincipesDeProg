@@ -17,3 +17,9 @@ class Plat(Base):
 
     restaurant_id = Column(Integer, ForeignKey("restaurants.id"), nullable=False)
     restaurant = relationship("Restaurant", back_populates="plats")
+    
+    commandes = relationship(
+        "Commande",
+        secondary="commande_plat",
+        back_populates="plats"
+    )

@@ -18,3 +18,9 @@ class Restaurant(Base):
         back_populates="restaurant",
         cascade="all, delete-orphan"
     )
+    
+    commandes = relationship(
+        "Commande",
+        back_populates="restaurant",
+        cascade="all, delete-orphan"
+    )
