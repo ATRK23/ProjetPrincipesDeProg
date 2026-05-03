@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class CommandeBase(BaseModel):
@@ -28,5 +28,4 @@ class CommandeResponse(BaseModel):
     created_at: datetime
     plat_ids: List[int]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
