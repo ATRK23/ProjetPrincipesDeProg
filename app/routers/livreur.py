@@ -7,11 +7,13 @@ from app.database import get_db
 from app.schemas.livreur import LivreurCreate, LivreurUpdate, LivreurResponse
 from app.crud import livreur as livreur_crud
 from app.crud import user as user_crud
+from app.security import get_current_user
 
 
 router = APIRouter(
     prefix="/livreurs",
-    tags=["Livreurs"]
+    tags=["Livreurs"],
+    dependencies=[Depends(get_current_user)]
 )
 
 

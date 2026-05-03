@@ -8,11 +8,13 @@ from app.schemas.command import CommandeCreate, CommandeUpdate, CommandeResponse
 from app.crud import command as commande_crud
 from app.crud import user as user_crud
 from app.crud import restaurant as restaurant_crud
+from app.security import get_current_user
 
 
 router = APIRouter(
     prefix="/commandes",
-    tags=["Commandes"]
+    tags=["Commandes"],
+    dependencies=[Depends(get_current_user)]
 )
 
 

@@ -7,6 +7,7 @@ from app.database import get_db
 from app.schemas.plat import PlatCreate, PlatUpdate, PlatResponse
 from app.crud import plat as plat_crud
 from app.crud import restaurant as restaurant_crud
+from app.security import get_current_user
 
 
 router = APIRouter(
@@ -18,7 +19,7 @@ router = APIRouter(
 # POST
 
 @router.post("/", response_model=PlatResponse, status_code=status.HTTP_201_CREATED)
-def create_plat(plat: PlatCreate, db: Session = Depends(get_db)):
+def create_plat(plat: PlatCreate, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
     restaurant = restaurant_crud.get_restaurant(db, plat.restaurant_id)
 
     if restaurant is None:
@@ -76,11 +77,7 @@ def get_plat(plat_id: int, db: Session = Depends(get_db)):
 # PATCH
 
 @router.patch("/{plat_id}", response_model=PlatResponse)
-def update_plat(
-    plat_id: int,
-    plat_update: PlatUpdate,
-    db: Session = Depends(get_db)
-):
+def update_plat(plat_id: int, plat_update: PlatUpdate, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
     db_plat = plat_crud.get_plat(db, plat_id)
 
     if db_plat is None:
@@ -104,7 +101,7 @@ def update_plat(
 # DELETE
 
 @router.delete("/{plat_id}", response_model=PlatResponse)
-def delete_plat(plat_id: int, db: Session = Depends(get_db)):
+def delete_plat(plat_id: int, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
     db_plat = plat_crud.get_plat(db, plat_id)
 
     if db_plat is None:
