@@ -43,6 +43,17 @@ def get_commandes_by_restaurant(
     )
 
 
+def get_commandes_available_for_delivery(db: Session, skip: int = 0, limit: int = 100):
+    return (
+        db.query(Commande)
+        .filter(Commande.statut.in_(["en_preparation", "prete"]))
+        .filter(Commande.statut_livraison == "non_assignee")
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+
+
 def get_plats_by_ids(db: Session, plat_ids: list[int]):
     return db.query(Plat).filter(Plat.id.in_(plat_ids)).all()
 
@@ -60,6 +71,7 @@ def create_commande(db: Session, commande: CommandeCreate):
         user_id=commande.user_id,
         restaurant_id=commande.restaurant_id,
         livreur_id=None,
+        statut_livraison="non_assignee",
         prix_total=prix_total,
         plats=plats
     )
@@ -92,8 +104,30 @@ def update_commande(
     return db_commande
 
 
+def claim_commande_delivery(db: Session, db_commande: Commande, livreur_id: int):
+    db_commande.livreur_id = livreur_id
+    db_commande.statut_livraison = "assignee"
+
+    db.commit()
+    db.refresh(db_commande)
+
+    return db_commande
+
+
 def update_commande_status(db: Session, db_commande: Commande, statut: str):
     db_commande.statut = statut
+
+    db.commit()
+    db.refresh(db_commande)
+
+    return db_commande
+
+
+def update_livraison_status(db: Session, db_commande: Commande, statut_livraison: str):
+    db_commande.statut_livraison = statut_livraison
+
+    if statut_livraison == "livree":
+        db_commande.statut = "terminee"
 
     db.commit()
     db.refresh(db_commande)

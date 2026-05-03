@@ -26,6 +26,7 @@ def format_commande_response(commande):
         restaurant_id=commande.restaurant_id,
         livreur_id=commande.livreur_id,
         statut=commande.statut,
+        statut_livraison=commande.statut_livraison,
         prix_total=commande.prix_total,
         created_at=commande.created_at,
         plat_ids=[plat.id for plat in commande.plats]
@@ -49,7 +50,7 @@ def check_commande_delete_access(commande, current_user):
     if commande.restaurant.owner_id == current_user.id and commande.statut in ["en_attente", "en_preparation"]:
         return
 
-    if is_assigned_livreur(commande, current_user) and commande.statut == "en_livraison":
+    if is_assigned_livreur(commande, current_user) and commande.statut_livraison in ["assignee", "recuperee"]:
         return
 
     raise HTTPException(
@@ -72,16 +73,53 @@ def check_livreur_or_admin(commande, current_user):
     )
 
 
-def validate_livreur(db: Session, livreur_id: int):
-    livreur = livreur_crud.get_livreur(db, livreur_id)
+def get_current_livreur(db: Session, current_user):
+    livreur = livreur_crud.get_livreur_by_user(db, current_user.id)
 
     if livreur is None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Livreur introuvable"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Profil livreur requis"
         )
 
     return livreur
+
+
+def check_commande_available_for_delivery(commande):
+    if commande.statut not in ["en_preparation", "prete"] or commande.statut_livraison != "non_assignee" or commande.livreur_id is not None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Commande non disponible pour livraison"
+        )
+
+
+def check_livraison_transition(current_status: str, next_status: str):
+    allowed_transitions = {
+        "assignee": ["recuperee"],
+        "recuperee": ["en_route"],
+        "en_route": ["livree"]
+    }
+
+    if next_status not in allowed_transitions.get(current_status, []):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Transition de livraison invalide"
+        )
+
+
+def check_commande_status_transition(current_status: str, next_status: str):
+    allowed_transitions = {
+        "en_attente": ["acceptee", "en_preparation", "annulee"],
+        "acceptee": ["en_preparation", "annulee"],
+        "en_preparation": ["prete", "annulee"],
+        "prete": ["annulee"]
+    }
+
+    if next_status not in allowed_transitions.get(current_status, []):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Transition de commande invalide"
+        )
 
 
 def validate_commande_data(
@@ -143,6 +181,15 @@ def create_commande(commande: CommandeCreate, db: Session = Depends(get_db), cur
 @router.get("/", response_model=List[CommandeResponse])
 def get_commandes(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), current_user = Depends(require_roles(ROLE_ADMIN))):
     commandes = commande_crud.get_commandes(db, skip=skip, limit=limit)
+
+    return [format_commande_response(commande) for commande in commandes]
+
+
+@router.get("/available-for-delivery", response_model=List[CommandeResponse])
+def get_commandes_available_for_delivery(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
+    get_current_livreur(db, current_user)
+
+    commandes = commande_crud.get_commandes_available_for_delivery(db, skip=skip, limit=limit)
 
     return [format_commande_response(commande) for commande in commandes]
 
@@ -237,8 +284,28 @@ def update_livraison_status(commande_id: int, livraison_update: CommandeLivraiso
         )
 
     check_livreur_or_admin(db_commande, current_user)
+    check_livraison_transition(db_commande.statut_livraison, livraison_update.statut_livraison)
 
-    updated_commande = commande_crud.update_commande_status(db, db_commande, livraison_update.statut)
+    updated_commande = commande_crud.update_livraison_status(db, db_commande, livraison_update.statut_livraison)
+
+    return format_commande_response(updated_commande)
+
+
+@router.patch("/{commande_id}/claim-delivery", response_model=CommandeResponse)
+def claim_commande_delivery(commande_id: int, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
+    livreur = get_current_livreur(db, current_user)
+
+    db_commande = commande_crud.get_commande(db, commande_id)
+
+    if db_commande is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Commande introuvable"
+        )
+
+    check_commande_available_for_delivery(db_commande)
+
+    updated_commande = commande_crud.claim_commande_delivery(db, db_commande, livreur.id)
 
     return format_commande_response(updated_commande)
 
@@ -255,6 +322,9 @@ def update_commande(commande_id: int, commande_update: CommandeUpdate, db: Sessi
 
     check_restaurant_owner_or_admin(db_commande.restaurant, current_user)
 
+    if commande_update.statut is not None:
+        check_commande_status_transition(db_commande.statut, commande_update.statut)
+
     if commande_update.plat_ids is not None:
         validate_commande_data(
             db,
@@ -262,9 +332,6 @@ def update_commande(commande_id: int, commande_update: CommandeUpdate, db: Sessi
             db_commande.restaurant_id,
             commande_update.plat_ids
         )
-
-    if commande_update.livreur_id is not None:
-        validate_livreur(db, commande_update.livreur_id)
 
     updated_commande = commande_crud.update_commande(
         db,

@@ -23,6 +23,7 @@ class Commande(Base):
     livreur_id = Column(Integer, ForeignKey("livreurs.id"), nullable=True)
 
     statut = Column(String(50), default="en_attente", nullable=False)
+    statut_livraison = Column(String(50), default="non_assignee", nullable=False)
     prix_total = Column(Float, nullable=False)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())

@@ -1,7 +1,10 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict
+
+CommandeStatus = Literal["en_attente", "acceptee", "en_preparation", "prete", "annulee", "terminee"]
+LivraisonStatus = Literal["non_assignee", "assignee", "recuperee", "en_route", "livree"]
 
 
 class CommandeBase(BaseModel):
@@ -15,13 +18,12 @@ class CommandeCreate(CommandeBase):
 
 
 class CommandeUpdate(BaseModel):
-    statut: Optional[str] = None
-    livreur_id: Optional[int] = None
+    statut: Optional[CommandeStatus] = None
     plat_ids: Optional[List[int]] = None
 
 
 class CommandeLivraisonStatusUpdate(BaseModel):
-    statut: str
+    statut_livraison: LivraisonStatus
 
 
 class CommandeResponse(BaseModel):
@@ -29,7 +31,8 @@ class CommandeResponse(BaseModel):
     user_id: int
     restaurant_id: int
     livreur_id: Optional[int] = None
-    statut: str
+    statut: CommandeStatus
+    statut_livraison: LivraisonStatus
     prix_total: float
     created_at: datetime
     plat_ids: List[int]
