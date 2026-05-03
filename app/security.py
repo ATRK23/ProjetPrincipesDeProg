@@ -35,6 +35,11 @@ ACCESS_TOKEN_EXPIRE_MINUTES = os.getenv(
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
+ROLE_USER = "user"
+ROLE_ADMIN = "admin"
+ROLE_LIVREUR = "livreur"
+ROLE_RESTAURANT_OWNER = "restaurant_owner"
+
 
 def hash_password(password: str):
     return pwd_context.hash(password)
@@ -82,3 +87,36 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         )
 
     return user
+
+
+def require_roles(*allowed_roles: str):
+    def role_checker(current_user = Depends(get_current_user)):
+        if current_user.role not in allowed_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Accès interdit"
+            )
+
+        return current_user
+
+    return role_checker
+
+
+def check_user_is_self_or_admin(user_id: int, current_user):
+    if current_user.role == ROLE_ADMIN or current_user.id == user_id:
+        return
+
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Accès interdit"
+    )
+
+
+def check_restaurant_owner_or_admin(restaurant, current_user):
+    if current_user.role == ROLE_ADMIN or restaurant.owner_id == current_user.id:
+        return
+
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Accès interdit"
+    )

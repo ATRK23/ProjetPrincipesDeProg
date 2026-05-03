@@ -26,5 +26,6 @@ class RestaurantUpdate(BaseModel):
 
 class RestaurantResponse(RestaurantBase):
     id: int
+    owner_id: Optional[int] = None
     
     model_config = ConfigDict(from_attributes=True)

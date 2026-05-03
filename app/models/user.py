@@ -12,6 +12,7 @@ class User(Base):
     email = Column(String(150), unique=True, index=True, nullable=False)
     phone = Column(String(20), nullable=True)
     address = Column(String(255), nullable=True)
+    role = Column(String(50), default="user", nullable=False)
     hashed_password = Column(String(255), nullable=False)
     
     commandes = relationship(
@@ -25,4 +26,9 @@ class User(Base):
         back_populates="user",
         uselist=False,
         cascade="all, delete-orphan"
+    )
+
+    restaurants = relationship(
+        "Restaurant",
+        back_populates="owner"
     )

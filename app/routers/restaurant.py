@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.schemas.restaurant import RestaurantCreate, RestaurantUpdate, RestaurantResponse
 from app.crud import restaurant as restaurant_crud
-from app.security import get_current_user
+from app.security import ROLE_RESTAURANT_OWNER, ROLE_USER, check_restaurant_owner_or_admin, get_current_user
 
 router = APIRouter(
     prefix="/restaurants",
@@ -18,7 +18,14 @@ router = APIRouter(
 
 @router.post("/", response_model=RestaurantResponse, status_code=status.HTTP_201_CREATED)
 def create_restaurant(restaurant: RestaurantCreate, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
-    return restaurant_crud.create_restaurant(db, restaurant)
+    db_restaurant = restaurant_crud.create_restaurant(db, restaurant, owner_id=current_user.id)
+
+    if current_user.role == ROLE_USER:
+        current_user.role = ROLE_RESTAURANT_OWNER
+        db.commit()
+        db.refresh(current_user)
+
+    return db_restaurant
 
 
 # GET
@@ -52,6 +59,8 @@ def update_restaurant(restaurant_id: int, restaurant_update: RestaurantUpdate, d
             detail="Restaurant introuvable"
         )
 
+    check_restaurant_owner_or_admin(db_restaurant, current_user)
+
     return restaurant_crud.update_restaurant(db, db_restaurant, restaurant_update)
 
 
@@ -66,5 +75,7 @@ def delete_restaurant(restaurant_id: int, db: Session = Depends(get_db), current
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Restaurant introuvable"
         )
+
+    check_restaurant_owner_or_admin(db_restaurant, current_user)
 
     return restaurant_crud.delete_restaurant(db, db_restaurant)

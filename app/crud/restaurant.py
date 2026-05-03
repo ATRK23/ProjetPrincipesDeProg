@@ -15,14 +15,15 @@ def get_restaurants(db: Session, skip: int = 0, limit: int = 100):
 
 # Setters
 
-def create_restaurant(db: Session, restaurant: RestaurantCreate):
+def create_restaurant(db: Session, restaurant: RestaurantCreate, owner_id: int | None = None):
     
     db_restaurant = Restaurant(
         name=restaurant.name,
         address=restaurant.address,
         phone=restaurant.phone,
         description=restaurant.description,
-        is_open=restaurant.is_open
+        is_open=restaurant.is_open,
+        owner_id=owner_id
     )
     
     db.add(db_restaurant)

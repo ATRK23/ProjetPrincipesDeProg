@@ -7,7 +7,7 @@ from app.database import get_db
 from app.schemas.plat import PlatCreate, PlatUpdate, PlatResponse
 from app.crud import plat as plat_crud
 from app.crud import restaurant as restaurant_crud
-from app.security import get_current_user
+from app.security import check_restaurant_owner_or_admin, get_current_user
 
 
 router = APIRouter(
@@ -27,6 +27,8 @@ def create_plat(plat: PlatCreate, db: Session = Depends(get_db), current_user = 
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Restaurant introuvable"
         )
+
+    check_restaurant_owner_or_admin(restaurant, current_user)
 
     return plat_crud.create_plat(db, plat)
 
@@ -86,6 +88,8 @@ def update_plat(plat_id: int, plat_update: PlatUpdate, db: Session = Depends(get
             detail="Plat introuvable"
         )
 
+    check_restaurant_owner_or_admin(db_plat.restaurant, current_user)
+
     if plat_update.restaurant_id is not None:
         restaurant = restaurant_crud.get_restaurant(db, plat_update.restaurant_id)
 
@@ -94,6 +98,8 @@ def update_plat(plat_id: int, plat_update: PlatUpdate, db: Session = Depends(get
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Restaurant introuvable"
             )
+
+        check_restaurant_owner_or_admin(restaurant, current_user)
 
     return plat_crud.update_plat(db, db_plat, plat_update)
 
@@ -109,5 +115,7 @@ def delete_plat(plat_id: int, db: Session = Depends(get_db), current_user = Depe
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Plat introuvable"
         )
+
+    check_restaurant_owner_or_admin(db_plat.restaurant, current_user)
 
     return plat_crud.delete_plat(db, db_plat)
