@@ -25,9 +25,20 @@ Démarrer le docker :
 docker compose up -d
 ```
 
+Appliquer les migrations Alembic :
+```
+alembic upgrade head
+```
+
+Créer une nouvelle migration après modification des modèles SQLAlchemy :
+```
+alembic revision --autogenerate -m "description de la migration"
+```
+
 # Tests avec unicorn
 
 - S'assurer que le docker est lancé
+- S'assurer que les migrations sont appliquées avec ```alembic upgrade head```
 - Lancer unicorn : 
 ```
 python -m uvicorn app.main:app --reload
@@ -39,6 +50,7 @@ python -m uvicorn app.main:app --reload
 # Tests avec Pytest
 
 - S'assurer que le docker est lancé
+- S'assurer que les migrations sont appliquées avec ```alembic upgrade head```
 - Executer ```pytest``` :
 ```
 pytest
