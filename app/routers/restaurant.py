@@ -32,7 +32,7 @@ def get_restaurant(restaurant_id: int, db: Session = Depends(get_db)):
 
     if db_restaurant is None:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Restaurant introuvable"
         )
 
@@ -47,7 +47,7 @@ def update_restaurant(restaurant_id: int, restaurant_update: RestaurantUpdate, d
 
     if db_restaurant is None:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Restaurant introuvable"
         )
 
@@ -62,7 +62,7 @@ def delete_restaurant(restaurant_id: int, db: Session = Depends(get_db)):
 
     if db_restaurant is None:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Restaurant introuvable"
         )
 

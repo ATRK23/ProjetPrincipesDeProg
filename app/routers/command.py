@@ -38,7 +38,7 @@ def validate_commande_data(
 
     if user is None:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Utilisateur introuvable"
         )
 
@@ -46,7 +46,7 @@ def validate_commande_data(
 
     if restaurant is None:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Restaurant introuvable"
         )
 
@@ -54,14 +54,14 @@ def validate_commande_data(
 
     if len(plats) != len(set(plat_ids)):
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Un ou plusieurs plats sont introuvables"
         )
 
     for plat in plats:
         if plat.restaurant_id != restaurant_id:
             raise HTTPException(
-                status_code=400,
+                status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Tous les plats doivent appartenir au restaurant de la commande"
             )
 
@@ -107,7 +107,7 @@ def get_commandes_by_user(
 
     if user is None:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Utilisateur introuvable"
         )
 
@@ -132,7 +132,7 @@ def get_commandes_by_restaurant(
 
     if restaurant is None:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Restaurant introuvable"
         )
 
@@ -155,7 +155,7 @@ def get_commande(
 
     if db_commande is None:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Commande introuvable"
         )
 
@@ -172,7 +172,7 @@ def update_commande(
 
     if db_commande is None:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Commande introuvable"
         )
 
@@ -202,7 +202,7 @@ def delete_commande(
 
     if db_commande is None:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Commande introuvable"
         )
 

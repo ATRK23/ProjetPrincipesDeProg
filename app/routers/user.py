@@ -21,8 +21,8 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
     
     if existing_user:
         raise HTTPException(
-            status_code=400,
-            detail = "Un utilisateur avec cet email existe déjà."
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Un utilisateur avec cet email existe déjà."
         )
         
     return user_crud.create_user(db, user)
@@ -40,7 +40,7 @@ def get_user(user_id: int, db: Session = Depends(get_db)):
     
     if db_user is None:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Utilisateur introuvable"
         )
         
@@ -55,8 +55,8 @@ def update_user(user_id: int, user_update: UserUpdate, db: Session = Depends(get
     
     if db_user is None:
         raise HTTPException(
-            status_code=404,
-            detail="Utilisateur Introuvable"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Utilisateur introuvable"
         )
         
     return user_crud.update_user(db, db_user, user_update)
@@ -70,8 +70,8 @@ def delete_user(user_id: int, db: Session = Depends(get_db)):
     
     if db_user is None:
         raise HTTPException(
-            status_code=404,
-            detail="Utilisateur Introuvable"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Utilisateur introuvable"
         )
         
     return user_crud.delete_user(db, db_user)

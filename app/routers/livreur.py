@@ -21,7 +21,7 @@ def create_livreur(livreur: LivreurCreate, db: Session = Depends(get_db)):
 
     if user is None:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Utilisateur introuvable"
         )
 
@@ -29,7 +29,7 @@ def create_livreur(livreur: LivreurCreate, db: Session = Depends(get_db)):
 
     if existing_livreur:
         raise HTTPException(
-            status_code=400,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail="Cet utilisateur est déjà livreur"
         )
 
@@ -47,7 +47,7 @@ def get_livreur_by_user(user_id: int, db: Session = Depends(get_db)):
 
     if livreur is None:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Livreur introuvable pour cet utilisateur"
         )
 
@@ -60,7 +60,7 @@ def get_livreur(livreur_id: int, db: Session = Depends(get_db)):
 
     if livreur is None:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Livreur introuvable"
         )
 
@@ -77,7 +77,7 @@ def update_livreur(
 
     if livreur is None:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Livreur introuvable"
         )
 
@@ -90,7 +90,7 @@ def delete_livreur(livreur_id: int, db: Session = Depends(get_db)):
 
     if livreur is None:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Livreur introuvable"
         )
 

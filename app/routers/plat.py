@@ -23,7 +23,7 @@ def create_plat(plat: PlatCreate, db: Session = Depends(get_db)):
 
     if restaurant is None:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Restaurant introuvable"
         )
 
@@ -48,7 +48,7 @@ def get_plats_by_restaurant(
 
     if restaurant is None:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Restaurant introuvable"
         )
 
@@ -66,7 +66,7 @@ def get_plat(plat_id: int, db: Session = Depends(get_db)):
 
     if db_plat is None:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Plat introuvable"
         )
 
@@ -85,7 +85,7 @@ def update_plat(
 
     if db_plat is None:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Plat introuvable"
         )
 
@@ -94,7 +94,7 @@ def update_plat(
 
         if restaurant is None:
             raise HTTPException(
-                status_code=404,
+                status_code=status.HTTP_404_NOT_FOUND,
                 detail="Restaurant introuvable"
             )
 
@@ -109,7 +109,7 @@ def delete_plat(plat_id: int, db: Session = Depends(get_db)):
 
     if db_plat is None:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Plat introuvable"
         )
 
