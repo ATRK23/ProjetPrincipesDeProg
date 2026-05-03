@@ -2,11 +2,12 @@
 Projet Principes de Programmation 
 
 
-# Installation
+# Installation locale
 
 - Créer un environnement python et installer les dépendances :
 ```
 python3 -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
 ```
 
@@ -18,16 +19,44 @@ cp .env_example .env
 
 - Modifier les variables d'environnement si nécessaire (optionnel)
 
-# Utilisation
+# Utilisation avec Docker
 
-Démarrer le docker : 
+L'API et la base de données sont conteneurisées séparément :
+- `api` : application FastAPI exposée sur http://127.0.0.1:8000
+- `db` : base PostgreSQL exposée sur le port local `5433`
+
+Démarrer l'API et la base de données :
 ```
-docker compose up -d
+docker compose up --build -d
 ```
 
-Appliquer les migrations Alembic :
+Les migrations Alembic sont appliquées automatiquement au démarrage du conteneur `api`.
+
+Vérifier les conteneurs :
 ```
-alembic upgrade head
+docker compose ps
+```
+
+Consulter les logs :
+```
+docker compose logs -f api
+```
+
+Arrêter les conteneurs :
+```
+docker compose down
+```
+
+Arrêter les conteneurs et supprimer les données PostgreSQL :
+```
+docker compose down -v
+```
+
+# Migrations en développement
+
+Appliquer les migrations Alembic manuellement, si l'API est lancée hors Docker :
+```
+DATABASE_URL=postgresql://postgres:postgres@localhost:5433/restaurant_db alembic upgrade head
 ```
 
 Créer une nouvelle migration après modification des modèles SQLAlchemy :
@@ -35,11 +64,11 @@ Créer une nouvelle migration après modification des modèles SQLAlchemy :
 alembic revision --autogenerate -m "description de la migration"
 ```
 
-# Tests avec unicorn
+# Tests avec uvicorn
 
-- S'assurer que le docker est lancé
-- S'assurer que les migrations sont appliquées avec ```alembic upgrade head```
-- Lancer unicorn : 
+- S'assurer que le service `db` est lancé
+- S'assurer que les migrations sont appliquées
+- Lancer uvicorn :
 ```
 python -m uvicorn app.main:app --reload
 ```
@@ -49,7 +78,7 @@ python -m uvicorn app.main:app --reload
 
 # Tests avec Pytest
 
-- S'assurer que le docker est lancé
+- S'assurer que le service `db` est lancé
 - S'assurer que les migrations sont appliquées avec ```alembic upgrade head```
 - Executer ```pytest``` :
 ```

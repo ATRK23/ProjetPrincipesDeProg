@@ -1,0 +1,11 @@
+.git
+.github
+.agents
+.codex
+.env
+.pytest_cache
+__pycache__
+*.pyc
+venv
+ENONCE.pdf
+tests
