@@ -20,6 +20,7 @@ class Commande(Base):
 
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     restaurant_id = Column(Integer, ForeignKey("restaurants.id"), nullable=False)
+    livreur_id = Column(Integer, ForeignKey("livreurs.id"), nullable=True)
 
     statut = Column(String(50), default="en_attente", nullable=False)
     prix_total = Column(Float, nullable=False)
@@ -28,4 +29,5 @@ class Commande(Base):
 
     user = relationship("User", back_populates="commandes")
     restaurant = relationship("Restaurant", back_populates="commandes")
+    livreur = relationship("Livreur", back_populates="commandes")
     plats = relationship("Plat", secondary=commande_plat, back_populates="commandes")

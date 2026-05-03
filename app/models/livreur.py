@@ -16,3 +16,4 @@ class Livreur(Base):
     user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
 
     user = relationship("User", back_populates="livreur")
+    commandes = relationship("Commande", back_populates="livreur")

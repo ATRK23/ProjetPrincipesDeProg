@@ -4,8 +4,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.schemas.command import CommandeCreate, CommandeUpdate, CommandeResponse
+from app.schemas.command import CommandeCreate, CommandeLivraisonStatusUpdate, CommandeUpdate, CommandeResponse
+from app.schemas.livreur import LivreurResponse
 from app.crud import command as commande_crud
+from app.crud import livreur as livreur_crud
 from app.crud import user as user_crud
 from app.crud import restaurant as restaurant_crud
 from app.security import ROLE_ADMIN, check_restaurant_owner_or_admin, check_user_is_self_or_admin, get_current_user, require_roles
@@ -22,6 +24,7 @@ def format_commande_response(commande):
         id=commande.id,
         user_id=commande.user_id,
         restaurant_id=commande.restaurant_id,
+        livreur_id=commande.livreur_id,
         statut=commande.statut,
         prix_total=commande.prix_total,
         created_at=commande.created_at,
@@ -30,23 +33,55 @@ def format_commande_response(commande):
 
 
 def check_commande_access(commande, current_user):
-    if current_user.role == ROLE_ADMIN or commande.user_id == current_user.id:
+    if current_user.role == ROLE_ADMIN or commande.user_id == current_user.id or is_assigned_livreur(commande, current_user):
         return
 
     check_restaurant_owner_or_admin(commande.restaurant, current_user)
 
 
 def check_commande_delete_access(commande, current_user):
-    if current_user.role == ROLE_ADMIN or commande.restaurant.owner_id == current_user.id:
+    if current_user.role == ROLE_ADMIN:
         return
 
     if commande.user_id == current_user.id and commande.statut == "en_attente":
+        return
+
+    if commande.restaurant.owner_id == current_user.id and commande.statut in ["en_attente", "en_preparation"]:
+        return
+
+    if is_assigned_livreur(commande, current_user) and commande.statut == "en_livraison":
         return
 
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
         detail="Accès interdit"
     )
+
+
+def is_assigned_livreur(commande, current_user):
+    return commande.livreur is not None and commande.livreur.user_id == current_user.id
+
+
+def check_livreur_or_admin(commande, current_user):
+    if current_user.role == ROLE_ADMIN or is_assigned_livreur(commande, current_user):
+        return
+
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Accès interdit"
+    )
+
+
+def validate_livreur(db: Session, livreur_id: int):
+    livreur = livreur_crud.get_livreur(db, livreur_id)
+
+    if livreur is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Livreur introuvable"
+        )
+
+    return livreur
 
 
 def validate_commande_data(
@@ -156,6 +191,26 @@ def get_commandes_by_restaurant(restaurant_id: int, skip: int = 0, limit: int = 
     return [format_commande_response(commande) for commande in commandes]
 
 
+@router.get("/{commande_id}/livreur", response_model=LivreurResponse)
+def get_livreur_by_commande(commande_id: int, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
+    db_commande = commande_crud.get_commande(db, commande_id)
+
+    if db_commande is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Commande introuvable"
+        )
+
+    check_commande_access(db_commande, current_user)
+
+    if db_commande.livreur is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Aucun livreur assigné à cette commande"
+        )
+
+    return db_commande.livreur
+
 @router.get("/{commande_id}", response_model=CommandeResponse)
 def get_commande(commande_id: int, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
     db_commande = commande_crud.get_commande(db, commande_id)
@@ -169,6 +224,23 @@ def get_commande(commande_id: int, db: Session = Depends(get_db), current_user =
     check_commande_access(db_commande, current_user)
 
     return format_commande_response(db_commande)
+
+
+@router.patch("/{commande_id}/livraison-status", response_model=CommandeResponse)
+def update_livraison_status(commande_id: int, livraison_update: CommandeLivraisonStatusUpdate, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
+    db_commande = commande_crud.get_commande(db, commande_id)
+
+    if db_commande is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Commande introuvable"
+        )
+
+    check_livreur_or_admin(db_commande, current_user)
+
+    updated_commande = commande_crud.update_commande_status(db, db_commande, livraison_update.statut)
+
+    return format_commande_response(updated_commande)
 
 
 @router.patch("/{commande_id}", response_model=CommandeResponse)
@@ -190,6 +262,9 @@ def update_commande(commande_id: int, commande_update: CommandeUpdate, db: Sessi
             db_commande.restaurant_id,
             commande_update.plat_ids
         )
+
+    if commande_update.livreur_id is not None:
+        validate_livreur(db, commande_update.livreur_id)
 
     updated_commande = commande_crud.update_commande(
         db,

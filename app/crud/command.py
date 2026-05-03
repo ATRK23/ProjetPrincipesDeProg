@@ -59,6 +59,7 @@ def create_commande(db: Session, commande: CommandeCreate):
     db_commande = Commande(
         user_id=commande.user_id,
         restaurant_id=commande.restaurant_id,
+        livreur_id=None,
         prix_total=prix_total,
         plats=plats
     )
@@ -84,6 +85,15 @@ def update_commande(
 
     for key, value in update_data.items():
         setattr(db_commande, key, value)
+
+    db.commit()
+    db.refresh(db_commande)
+
+    return db_commande
+
+
+def update_commande_status(db: Session, db_commande: Commande, statut: str):
+    db_commande.statut = statut
 
     db.commit()
     db.refresh(db_commande)
