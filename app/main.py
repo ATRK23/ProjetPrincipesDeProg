@@ -2,7 +2,7 @@ from fastapi import FastAPI
 
 from app.database import Base, engine
 from app.models import User, Restaurant, Plat, Commande, Livreur
-from app.routers import user, restaurant, plat, command, livreur
+from app.routers import user, restaurant, plat, command, livreur, auth
 
 app = FastAPI(
     title="Restaurant API",
@@ -17,6 +17,7 @@ app.include_router(restaurant.router)
 app.include_router(plat.router)
 app.include_router(command.router)
 app.include_router(livreur.router)
+app.include_router(auth.router)
 
 
 @app.get("/")
