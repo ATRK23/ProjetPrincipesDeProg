@@ -557,31 +557,9 @@ Les tests couvrent notamment :
 
 ## Image Docker
 
-### Construction locale
-
-Construire l'image de l'API :
-
-```bash
-docker build -t restaurant-api:latest .
-```
-
-L'image API seule a besoin d'une base PostgreSQL accessible par `DATABASE_URL`. Le plus simple reste d'utiliser `docker compose up --build -d`, car Compose lance l'API, PostgreSQL et le volume de persistance ensemble.
-
 ### Publication Docker Hub
 
-L'enonce demande de publier l'image API sur Docker Hub et de mentionner le lien dans le README. Le depot ne contient pas d'information permettant de connaitre le compte Docker Hub final. A renseigner apres publication :
-
-```text
-https://hub.docker.com/r/<compte-dockerhub>/restaurant-api
-```
-
-Commandes de publication :
-
-```bash
-docker login
-docker build -t <compte-dockerhub>/restaurant-api:latest .
-docker push <compte-dockerhub>/restaurant-api:latest
-```
+https://hub.docker.com/r/atrk23/restaurant-api
 
 Commande pour lancer l'image publiee avec une base PostgreSQL sur le meme reseau Docker :
 
