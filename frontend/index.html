@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MiamDelivery 🛵</title>
+    <style>
+        /* Base & Reset */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+        body { background-color: #f7f7f7; color: #000; }
+        
+        /* Navbar */
+        header { background: #fff; padding: 20px 40px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 100; display: flex; justify-content: space-between; align-items: center; }
+        header h1 { font-size: 24px; color: #06C167; letter-spacing: -1px; } 
+        .cart-btn { background: #000; color: #fff; padding: 10px 20px; border-radius: 20px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+        .cart-btn:hover { background: #333; }
+
+        /* Conteneur principal */
+        .container { max-width: 1000px; margin: 40px auto; padding: 0 20px; }
+        h2 { font-size: 28px; margin-bottom: 20px; }
+
+        /* Grille des restaurants */
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+        
+        /* Carte Restaurant */
+        .resto-card { background: #fff; border-radius: 12px; overflow: hidden; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #eee; }
+        .resto-card:hover { transform: translateY(-5px); box-shadow: 0 8px 16px rgba(0,0,0,0.1); }
+        
+        /* NOUVEAU : Image du restaurant */
+        .resto-img { height: 160px; width: 100%; object-fit: cover; }
+        
+        .resto-content { padding: 15px; }
+        .resto-title { font-size: 18px; font-weight: bold; margin-bottom: 5px; }
+        .resto-desc { color: #555; font-size: 14px; margin-bottom: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .resto-meta { font-size: 13px; color: #888; background: #f1f1f1; display: inline-block; padding: 5px 10px; border-radius: 15px; }
+
+        /* Menu du restaurant */
+        #menu-section { display: none; }
+        .back-btn { display: inline-block; margin-bottom: 20px; padding: 10px 15px; background: #eee; border-radius: 20px; cursor: pointer; font-weight: bold; transition: background 0.2s; }
+        .back-btn:hover { background: #e0e0e0; }
+        
+        /* Bannière du menu */
+        .menu-banner { width: 100%; height: 200px; object-fit: cover; border-radius: 12px; margin-bottom: 20px; }
+
+        /* Carte Plat */
+        .plat-card { display: flex; justify-content: space-between; align-items: center; background: #fff; padding: 20px; border-radius: 12px; border: 1px solid #eee; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); transition: border-color 0.2s; }
+        .plat-card:hover { border-color: #06C167; cursor: pointer; }
+        .plat-info { flex: 1; padding-right: 20px; }
+        .plat-info h4 { font-size: 16px; margin-bottom: 8px; }
+        .plat-info p { color: #666; font-size: 14px; margin-bottom: 8px;}
+        .plat-price { font-weight: bold; color: #000; font-size: 16px; }
+        
+        /* NOUVEAU : Image du plat */
+        .plat-img { width: 110px; height: 110px; border-radius: 8px; object-fit: cover; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>MiamDelivery</h1>
+        <div class="cart-btn">🛒 Panier (0)</div>
+    </header>
+
+    <div class="container">
+        <!-- VUE 1 : Liste des restaurants -->
+        <div id="home-section">
+            <h2>À la une</h2>
+            <div id="liste-restaurants" class="grid">
+                <p>Recherche des restaurants à proximité...</p>
+            </div>
+        </div>
+
+        <!-- VUE 2 : Menu d'un restaurant -->
+        <div id="menu-section">
+            <div class="back-btn" onclick="retourAccueil()">← Retour</div>
+            
+            <img id="banner-resto-menu" class="menu-banner" src="" alt="Bannière">
+            <h2 id="nom-resto-menu" style="margin-bottom: 5px;">Menu</h2>
+            <p style="color: #666; margin-bottom: 20px;" id="desc-resto-menu"></p>
+            
+            <h3>Plats populaires</h3>
+            <br>
+            <div id="liste-plats"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://127.0.0.1:8000';
+        let tousLesPlats = [];
+
+        // 1. On associe CHAQUE restaurant à son image exacte
+        const imagesParResto = {
+            "Le Bistro du Code": "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&q=80", // Viande / Plat tradi
+            "Pizza Algo": "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=600&q=80", // Pizza
+            "Sushi Recursion": "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?w=600&q=80", // Sushi
+            // Image par défaut si on ajoute un nouveau resto
+            "default": "https://images.unsplash.com/photo-1550547660-d9450f859349?w=600&q=80" 
+        };
+
+        // 2. On fait pareil pour CHAQUE plat
+        const imagesParPlat = {
+            "Burger maison": "burger.jpg",
+            "Salade Cesar": "cesar.jpg",
+            "Tarte du jour": "tarte.jpg",
+            "Pizza Margherita": "margherita.jpg", 
+            "Pizza Regina": "regina.jpg", 
+            "Tiramisu": "Tiramisu.jpg", 
+            "Menu Bento": "./bento.jpg", 
+            // Image par défaut si on ajoute un nouveau plat
+            "default": "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=300&q=80"
+        };
+
+        async function initialiserApp() {
+            try {
+                const [resRestos, resPlats] = await Promise.all([
+                    fetch(`${API_URL}/restaurants/`),
+                    fetch(`${API_URL}/plats/`)
+                ]);
+
+                const restaurants = await resRestos.json();
+                tousLesPlats = await resPlats.json();
+
+                afficherRestaurants(restaurants);
+            } catch (error) {
+                document.getElementById('liste-restaurants').innerHTML = `<p style="color:red;">Erreur de connexion à l'API.</p>`;
+            }
+        }
+
+        function afficherRestaurants(restaurants) {
+            const conteneur = document.getElementById('liste-restaurants');
+            conteneur.innerHTML = '';
+
+            restaurants.forEach((resto) => {
+                // On cherche l'image correspondante, ou on prend celle par défaut
+                const imgResto = imagesParResto[resto.name] || imagesParResto["default"];
+
+                const card = document.createElement('div');
+                card.className = 'resto-card';
+                card.onclick = () => ouvrirMenu(resto, imgResto); 
+
+                card.innerHTML = `
+                    <img src="${imgResto}" alt="${resto.name}" class="resto-img">
+                    <div class="resto-content">
+                        <div class="resto-title">${resto.name}</div>
+                        <div class="resto-desc">${resto.description || 'Spécialités culinaires'}</div>
+                        <div class="resto-meta">📍 ${resto.address}</div>
+                    </div>
+                `;
+                conteneur.appendChild(card);
+            });
+        }
+
+        function ouvrirMenu(resto, imgResto) {
+            document.getElementById('home-section').style.display = 'none';
+            document.getElementById('menu-section').style.display = 'block';
+
+            document.getElementById('banner-resto-menu').src = imgResto;
+            document.getElementById('nom-resto-menu').innerText = resto.name;
+            document.getElementById('desc-resto-menu').innerText = `📍 ${resto.address} • 📞 ${resto.phone || 'Non renseigné'}`;
+
+            const platsDuResto = tousLesPlats.filter(p => p.restaurant_id === resto.id);
+            const conteneurPlats = document.getElementById('liste-plats');
+            conteneurPlats.innerHTML = '';
+
+            if (platsDuResto.length === 0) {
+                conteneurPlats.innerHTML = '<p>Ce restaurant n\'a pas encore de menu en ligne.</p>';
+                return;
+            }
+
+            platsDuResto.forEach((plat) => {
+                const nomDuPlat = plat.nom || plat.name;
+                // On cherche l'image du plat, sinon on prend celle par défaut
+                const imgPlat = imagesParPlat[nomDuPlat] || imagesParPlat["default"];
+
+                conteneurPlats.innerHTML += `
+                    <div class="plat-card">
+                        <div class="plat-info">
+                            <h4>${nomDuPlat}</h4>
+                            <p>${plat.description || ''}</p>
+                            <div class="plat-price">${plat.prix || plat.price} €</div>
+                        </div>
+                        <img src="${imgPlat}" alt="${nomDuPlat}" class="plat-img">
+                    </div>
+                `;
+            });
+        }
+
+        function retourAccueil() {
+            document.getElementById('menu-section').style.display = 'none';
+            document.getElementById('home-section').style.display = 'block';
+            window.scrollTo(0, 0); 
+        }
+
+        initialiserApp();
+    </script>
+
+</body>
+</html>
