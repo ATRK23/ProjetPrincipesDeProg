@@ -1,16 +1,22 @@
-from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, Table
+from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from app.database import Base
 
 
-commande_plat = Table(
-    "commande_plat",
-    Base.metadata,
-    Column("commande_id", Integer, ForeignKey("commandes.id"), primary_key=True),
-    Column("plat_id", Integer, ForeignKey("plats.id"), primary_key=True),
-)
+class CommandePlat(Base):
+    __tablename__ = "commande_plat"
+
+    commande_id = Column(Integer, ForeignKey("commandes.id"), primary_key=True)
+    plat_id = Column(Integer, ForeignKey("plats.id"), primary_key=True)
+    quantite = Column(Integer, nullable=False, default=1)
+
+    commande = relationship("Commande", back_populates="items")
+    plat = relationship("Plat", back_populates="commande_items")
+
+
+commande_plat = CommandePlat.__table__
 
 
 class Commande(Base):
@@ -31,4 +37,14 @@ class Commande(Base):
     user = relationship("User", back_populates="commandes")
     restaurant = relationship("Restaurant", back_populates="commandes")
     livreur = relationship("Livreur", back_populates="commandes")
-    plats = relationship("Plat", secondary=commande_plat, back_populates="commandes")
+    items = relationship(
+        "CommandePlat",
+        back_populates="commande",
+        cascade="all, delete-orphan",
+    )
+    plats = relationship(
+        "Plat",
+        secondary="commande_plat",
+        back_populates="commandes",
+        viewonly=True,
+    )

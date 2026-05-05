@@ -1,8 +1,8 @@
 from sqlalchemy.orm import Session
 
-from app.models.command import Commande
+from app.models.command import Commande, CommandePlat
 from app.models.plat import Plat
-from app.schemas.command import CommandeCreate, CommandeUpdate
+from app.schemas.command import CommandeCreate, CommandeItem, CommandeUpdate
 
 
 def get_commande(db: Session, commande_id: int):
@@ -58,14 +58,26 @@ def get_plats_by_ids(db: Session, plat_ids: list[int]):
     return db.query(Plat).filter(Plat.id.in_(plat_ids)).all()
 
 
-def calculate_total(plats: list[Plat]):
-    return sum(plat.prix for plat in plats)
+def calculate_total(plats_by_id: dict[int, Plat], items: list[CommandeItem]):
+    return sum(plats_by_id[item.plat_id].prix * item.quantite for item in items)
+
+
+def build_commande_items(items: list[CommandeItem]):
+    return [
+        CommandePlat(plat_id=item.plat_id, quantite=item.quantite)
+        for item in items
+    ]
+
+
+def get_plats_by_items(db: Session, items: list[CommandeItem]):
+    return get_plats_by_ids(db, [item.plat_id for item in items])
 
 
 def create_commande(db: Session, commande: CommandeCreate):
-    plats = get_plats_by_ids(db, commande.plat_ids)
+    plats = get_plats_by_items(db, commande.items)
+    plats_by_id = {plat.id: plat for plat in plats}
 
-    prix_total = calculate_total(plats)
+    prix_total = calculate_total(plats_by_id, commande.items)
 
     db_commande = Commande(
         user_id=commande.user_id,
@@ -73,7 +85,7 @@ def create_commande(db: Session, commande: CommandeCreate):
         livreur_id=None,
         statut_livraison="non_assignee",
         prix_total=prix_total,
-        plats=plats
+        items=build_commande_items(commande.items),
     )
 
     db.add(db_commande)
@@ -90,10 +102,12 @@ def update_commande(
 ):
     update_data = commande_update.model_dump(exclude_unset=True)
 
-    if "plat_ids" in update_data:
-        plats = get_plats_by_ids(db, update_data.pop("plat_ids"))
-        db_commande.plats = plats
-        db_commande.prix_total = calculate_total(plats)
+    if "items" in update_data:
+        items = [CommandeItem(**item) for item in update_data.pop("items")]
+        plats = get_plats_by_items(db, items)
+        plats_by_id = {plat.id: plat for plat in plats}
+        db_commande.items = build_commande_items(items)
+        db_commande.prix_total = calculate_total(plats_by_id, items)
 
     for key, value in update_data.items():
         setattr(db_commande, key, value)

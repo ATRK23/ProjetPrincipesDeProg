@@ -9,6 +9,7 @@ class PlatBase(BaseModel):
     description: Optional[str] = None
     ingredients: Optional[str] = None
     allergenes: Optional[str] = None
+    image_url: Optional[str] = None
     is_available: bool = True
     
 class PlatCreate(PlatBase):
@@ -20,6 +21,7 @@ class PlatUpdate(BaseModel):
     description: Optional[str] = None
     ingredients: Optional[str] = None
     allergenes: Optional[str] = None
+    image_url: Optional[str] = None
     is_available: Optional[bool] = None
     restaurant_id: Optional[int] = None
     

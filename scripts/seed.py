@@ -13,7 +13,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from app.database import Base, SessionLocal, engine
-from app.models import Commande, Livreur, Plat, Restaurant, User
+from app.models import Commande, CommandePlat, Livreur, Plat, Restaurant, User
 from app.models.command import commande_plat
 from app.security import hash_password
 
@@ -81,6 +81,7 @@ RESTAURANTS = [
         "address": "8 rue Montorgueil, Paris",
         "phone": "0142000001",
         "description": "Cuisine francaise maison et plats du jour.",
+        "image_url": "/images/bistro_du_code.jpg",
         "is_open": True,
         "owner_email": "bistro@example.com",
     },
@@ -90,6 +91,7 @@ RESTAURANTS = [
         "address": "15 rue Oberkampf, Paris",
         "phone": "0142000002",
         "description": "Pizzas artisanales, pates fraiches et desserts italiens.",
+        "image_url": "/images/pizza_algo.jpg",
         "is_open": True,
         "owner_email": "pizza@example.com",
     },
@@ -99,6 +101,7 @@ RESTAURANTS = [
         "address": "3 quai de Seine, Paris",
         "phone": "0142000003",
         "description": "Sushis, makis et bentos.",
+        "image_url": "/images/sushi_recursion.jpg",
         "is_open": False,
         "owner_email": "bistro@example.com",
     },
@@ -113,6 +116,7 @@ PLATS = [
         "description": "Pain artisanal, steak, cheddar et sauce maison.",
         "ingredients": "Pain, boeuf, cheddar, salade, tomate",
         "allergenes": "gluten, lactose",
+        "image_url": "/images/burger.jpg",
         "is_available": True,
     },
     {
@@ -122,6 +126,7 @@ PLATS = [
         "description": "Salade romaine, poulet grille, parmesan et croutons.",
         "ingredients": "Salade, poulet, parmesan, croutons",
         "allergenes": "gluten, lactose, oeuf",
+        "image_url": "/images/cesar.jpg",
         "is_available": True,
     },
     {
@@ -131,6 +136,7 @@ PLATS = [
         "description": "Dessert maison selon la saison.",
         "ingredients": "Farine, beurre, fruits",
         "allergenes": "gluten, lactose",
+        "image_url": "/images/tarte.jpg",
         "is_available": False,
     },
     {
@@ -140,6 +146,7 @@ PLATS = [
         "description": "Tomate, mozzarella et basilic frais.",
         "ingredients": "Pate, tomate, mozzarella, basilic",
         "allergenes": "gluten, lactose",
+        "image_url": "/images/margherita.jpg",
         "is_available": True,
     },
     {
@@ -149,6 +156,7 @@ PLATS = [
         "description": "Tomate, mozzarella, jambon et champignons.",
         "ingredients": "Pate, tomate, mozzarella, jambon, champignons",
         "allergenes": "gluten, lactose",
+        "image_url": "/images/regina.jpg",
         "is_available": True,
     },
     {
@@ -158,6 +166,7 @@ PLATS = [
         "description": "Dessert italien au cafe.",
         "ingredients": "Mascarpone, cafe, biscuit, cacao",
         "allergenes": "gluten, lactose, oeuf",
+        "image_url": "/images/Tiramisu.jpg",
         "is_available": True,
     },
     {
@@ -167,6 +176,7 @@ PLATS = [
         "description": "Assortiment de riz, poisson et legumes.",
         "ingredients": "Riz, saumon, avocat, concombre",
         "allergenes": "poisson, sesame",
+        "image_url": "/images/bento.jpg",
         "is_available": False,
     },
 ]
@@ -194,7 +204,10 @@ COMMANDES = [
     {
         "user_email": "arthur@example.com",
         "restaurant_key": "bistro",
-        "plat_names": ["Burger maison", "Salade Cesar"],
+        "items": [
+            {"plat_name": "Burger maison", "quantite": 1},
+            {"plat_name": "Salade Cesar", "quantite": 1},
+        ],
         "statut": "en_attente",
         "statut_livraison": "non_assignee",
         "livreur_email": None,
@@ -202,7 +215,10 @@ COMMANDES = [
     {
         "user_email": "marie@example.com",
         "restaurant_key": "pizza",
-        "plat_names": ["Pizza Margherita", "Tiramisu"],
+        "items": [
+            {"plat_name": "Pizza Margherita", "quantite": 2},
+            {"plat_name": "Tiramisu", "quantite": 1},
+        ],
         "statut": "en_preparation",
         "statut_livraison": "non_assignee",
         "livreur_email": None,
@@ -210,7 +226,9 @@ COMMANDES = [
     {
         "user_email": "arthur@example.com",
         "restaurant_key": "pizza",
-        "plat_names": ["Pizza Regina"],
+        "items": [
+            {"plat_name": "Pizza Regina", "quantite": 1},
+        ],
         "statut": "prete",
         "statut_livraison": "assignee",
         "livreur_email": "leo@example.com",
@@ -218,7 +236,10 @@ COMMANDES = [
     {
         "user_email": "marie@example.com",
         "restaurant_key": "bistro",
-        "plat_names": ["Burger maison", "Tarte du jour"],
+        "items": [
+            {"plat_name": "Burger maison", "quantite": 1},
+            {"plat_name": "Tarte du jour", "quantite": 1},
+        ],
         "statut": "terminee",
         "statut_livraison": "livree",
         "livreur_email": "sara@example.com",
@@ -283,6 +304,7 @@ def get_or_create_restaurant(db, data: dict, users_by_email: dict[str, User]) ->
     restaurant.address = data["address"]
     restaurant.phone = data["phone"]
     restaurant.description = data["description"]
+    restaurant.image_url = data["image_url"]
     restaurant.is_open = data["is_open"]
     restaurant.owner = owner
     return restaurant
@@ -303,6 +325,7 @@ def get_or_create_plat(db, data: dict, restaurants_by_key: dict[str, Restaurant]
     plat.description = data["description"]
     plat.ingredients = data["ingredients"]
     plat.allergenes = data["allergenes"]
+    plat.image_url = data["image_url"]
     plat.is_available = data["is_available"]
     return plat
 
@@ -332,10 +355,13 @@ def create_commandes(
     for data in COMMANDES:
         restaurant = restaurants_by_key[data["restaurant_key"]]
         user = users_by_email[data["user_email"]]
-        plats = [
-            plat
-            for plat in restaurant.plats
-            if plat.nom in set(data["plat_names"])
+        plats_by_name = {plat.nom: plat for plat in restaurant.plats}
+        commande_items = [
+            CommandePlat(
+                plat=plats_by_name[item["plat_name"]],
+                quantite=item["quantite"],
+            )
+            for item in data["items"]
         ]
         livreur = (
             livreurs_by_email[data["livreur_email"]]
@@ -363,8 +389,8 @@ def create_commandes(
             livreur=livreur,
             statut=data["statut"],
             statut_livraison=data["statut_livraison"],
-            prix_total=sum(plat.prix for plat in plats),
-            plats=plats,
+            prix_total=sum(item.plat.prix * item.quantite for item in commande_items),
+            items=commande_items,
         )
         db.add(commande)
         created_commandes.append(commande)
