@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
@@ -21,6 +21,7 @@ type Restaurant = {
   description?: string | null;
   image_url?: string | null;
   is_open: boolean;
+  owner_id?: number | null;
 };
 
 type Plat = {
@@ -46,6 +47,7 @@ type OrderResponse = {
   statut: string;
   statut_livraison: string;
   prix_total: number;
+  created_at: string;
   items: Array<{ plat_id: number; quantite: number }>;
 };
 
@@ -91,13 +93,25 @@ export default function Home() {
   });
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [plats, setPlats] = useState<Plat[]>([]);
+  const [allPlats, setAllPlats] = useState<Plat[]>([]);
+  const [userOrders, setUserOrders] = useState<OrderResponse[]>([]);
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
+  const [showOrdersPage, setShowOrdersPage] = useState(false);
+  const [showRestaurantAdminPage, setShowRestaurantAdminPage] = useState(false);
+  const [ownerRestaurant, setOwnerRestaurant] = useState<Restaurant | null>(null);
+  const [ownerPlats, setOwnerPlats] = useState<Plat[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
   const [authError, setAuthError] = useState("");
   const [authSuccess, setAuthSuccess] = useState("");
   const [loadingAuth, setLoadingAuth] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
+  const [loadingOrders, setLoadingOrders] = useState(false);
+  const [loadingRestaurantAdmin, setLoadingRestaurantAdmin] = useState(false);
+  const [loadingProfile, setLoadingProfile] = useState(false);
+  const [ordersError, setOrdersError] = useState("");
+  const [restaurantAdminError, setRestaurantAdminError] = useState("");
+  const [profileError, setProfileError] = useState("");
   const [toast, setToast] = useState("");
   const [confirmedOrder, setConfirmedOrder] = useState<OrderResponse | null>(null);
 
@@ -108,11 +122,105 @@ export default function Home() {
 
   const cartCount = cart.reduce((total, item) => total + item.quantite, 0);
   const cartTotal = cart.reduce((total, item) => total + item.plat.prix * item.quantite, 0);
+  const ongoingOrders = userOrders.filter((order) => !["terminee", "annulee"].includes(order.statut));
+  const sortedOrders = [...userOrders].sort((first, second) => {
+    const firstIsOngoing = !["terminee", "annulee"].includes(first.statut);
+    const secondIsOngoing = !["terminee", "annulee"].includes(second.statut);
+
+    if (firstIsOngoing !== secondIsOngoing) return firstIsOngoing ? -1 : 1;
+
+    return new Date(second.created_at).getTime() - new Date(first.created_at).getTime();
+  });
 
   function notify(message: string) {
     setToast(message);
     window.setTimeout(() => setToast(""), 3000);
   }
+
+  function restaurantName(restaurantId: number) {
+    return restaurants.find((restaurant) => restaurant.id === restaurantId)?.name || `Restaurant #${restaurantId}`;
+  }
+
+  function platName(platId: number) {
+    return allPlats.find((plat) => plat.id === platId)?.nom || `Plat #${platId}`;
+  }
+
+  function statusLabel(status: string) {
+    const labels: Record<string, string> = {
+      en_attente: "En attente",
+      acceptee: "Acceptee",
+      en_preparation: "En preparation",
+      prete: "Prete",
+      annulee: "Annulee",
+      terminee: "Terminee",
+    };
+
+    return labels[status] || status;
+  }
+
+  async function loadOwnerRestaurant(force = false) {
+    if (!currentUser || !token || loadingRestaurantAdmin) return;
+    if (!force && ownerRestaurant) return;
+
+    setRestaurantAdminError("");
+    setLoadingRestaurantAdmin(true);
+
+    try {
+      const restaurantsResponse = await fetch(`${API_URL}/restaurants/`);
+      const restaurantsData = await parseApiResponse<Restaurant[]>(restaurantsResponse);
+      setRestaurants(restaurantsData);
+
+      const ownedRestaurant = restaurantsData.find((restaurant) => restaurant.owner_id === currentUser.id) || null;
+      setOwnerRestaurant(ownedRestaurant);
+
+      if (ownedRestaurant) {
+        const platsResponse = await fetch(`${API_URL}/plats/restaurant/${ownedRestaurant.id}`);
+        const platsData = await parseApiResponse<Plat[]>(platsResponse);
+        setOwnerPlats(platsData);
+        setAllPlats((current) => {
+          const otherPlats = current.filter((plat) => plat.restaurant_id !== ownedRestaurant.id);
+          return [...otherPlats, ...platsData];
+        });
+      } else {
+        setOwnerPlats([]);
+      }
+    } catch (error) {
+      setRestaurantAdminError(error instanceof Error ? error.message : "Impossible de charger le restaurant.");
+    } finally {
+      setLoadingRestaurantAdmin(false);
+    }
+  }
+
+  const loadUserOrders = useCallback(
+    async (force = false) => {
+      if (!currentUser || !token || loadingOrders) return;
+      if (!force && userOrders.length > 0) return;
+
+      setOrdersError("");
+      setLoadingOrders(true);
+
+      try {
+        const [ordersResponse, platsResponse] = await Promise.all([
+          fetch(`${API_URL}/commandes/user/${currentUser.id}`, {
+            headers: authHeaders,
+          }),
+          allPlats.length === 0 ? fetch(`${API_URL}/plats/`) : Promise.resolve(null),
+        ]);
+        const orders = await parseApiResponse<OrderResponse[]>(ordersResponse);
+        setUserOrders(orders);
+
+        if (platsResponse) {
+          const platsData = await parseApiResponse<Plat[]>(platsResponse);
+          setAllPlats(platsData);
+        }
+      } catch (error) {
+        setOrdersError(error instanceof Error ? error.message : "Impossible de charger les commandes.");
+      } finally {
+        setLoadingOrders(false);
+      }
+    },
+    [allPlats.length, authHeaders, currentUser, loadingOrders, token, userOrders.length],
+  );
 
   useEffect(() => {
     if (!currentUser || !token) return;
@@ -132,6 +240,12 @@ export default function Home() {
 
     loadData();
   }, [currentUser, token]);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => loadUserOrders(), 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [loadUserOrders]);
 
   async function handleRegister(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -200,7 +314,176 @@ export default function Home() {
     }
   }
 
+  async function handleProfileUpdate(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!currentUser || !token) return;
+
+    setProfileError("");
+    setLoadingProfile(true);
+
+    const form = new FormData(event.currentTarget);
+    const payload = {
+      username: String(form.get("username") || "").trim(),
+      email: String(form.get("email") || "").trim(),
+      phone: String(form.get("phone") || "").trim() || null,
+      address: String(form.get("address") || "").trim() || null,
+    };
+
+    try {
+      const response = await fetch(`${API_URL}/users/${currentUser.id}`, {
+        method: "PATCH",
+        headers: {
+          ...authHeaders,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+      const updatedUser = await parseApiResponse<User>(response);
+      sessionStorage.setItem("user", JSON.stringify(updatedUser));
+      setCurrentUser(updatedUser);
+      notify("Profil mis a jour.");
+    } catch (error) {
+      setProfileError(error instanceof Error ? error.message : "Modification impossible.");
+    } finally {
+      setLoadingProfile(false);
+    }
+  }
+
+  function openOrdersPage() {
+    setShowOrdersPage(true);
+    setShowRestaurantAdminPage(false);
+    setSelectedRestaurant(null);
+    setCartOpen(false);
+    loadUserOrders(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function openRestaurantAdminPage() {
+    setShowRestaurantAdminPage(true);
+    setShowOrdersPage(false);
+    setSelectedRestaurant(null);
+    setCartOpen(false);
+    loadOwnerRestaurant(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  async function handleRestaurantSave(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!token) return;
+
+    setRestaurantAdminError("");
+    setLoadingRestaurantAdmin(true);
+
+    const form = new FormData(event.currentTarget);
+    const payload = {
+      name: String(form.get("name") || "").trim(),
+      address: String(form.get("address") || "").trim(),
+      phone: String(form.get("phone") || "").trim() || null,
+      description: String(form.get("description") || "").trim() || null,
+      image_url: String(form.get("image_url") || "").trim() || null,
+      is_open: form.get("is_open") === "on",
+    };
+
+    try {
+      const response = await fetch(
+        ownerRestaurant ? `${API_URL}/restaurants/${ownerRestaurant.id}` : `${API_URL}/restaurants/`,
+        {
+          method: ownerRestaurant ? "PATCH" : "POST",
+          headers: {
+            ...authHeaders,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        },
+      );
+      const savedRestaurant = await parseApiResponse<Restaurant>(response);
+      setOwnerRestaurant(savedRestaurant);
+      setRestaurants((current) => {
+        const withoutSaved = current.filter((restaurant) => restaurant.id !== savedRestaurant.id);
+        return [...withoutSaved, savedRestaurant];
+      });
+      notify(ownerRestaurant ? "Restaurant mis a jour." : "Restaurant cree.");
+    } catch (error) {
+      setRestaurantAdminError(error instanceof Error ? error.message : "Enregistrement impossible.");
+    } finally {
+      setLoadingRestaurantAdmin(false);
+    }
+  }
+
+  async function handleCreatePlat(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!ownerRestaurant || !token) return;
+
+    setRestaurantAdminError("");
+    const form = new FormData(event.currentTarget);
+    const payload = {
+      nom: String(form.get("nom") || "").trim(),
+      prix: Number(form.get("prix") || 0),
+      description: String(form.get("description") || "").trim() || null,
+      ingredients: String(form.get("ingredients") || "").trim() || null,
+      allergenes: String(form.get("allergenes") || "").trim() || null,
+      image_url: String(form.get("image_url") || "").trim() || null,
+      is_available: form.get("is_available") === "on",
+      restaurant_id: ownerRestaurant.id,
+    };
+
+    try {
+      const response = await fetch(`${API_URL}/plats/`, {
+        method: "POST",
+        headers: {
+          ...authHeaders,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+      const createdPlat = await parseApiResponse<Plat>(response);
+      setOwnerPlats((current) => [...current, createdPlat]);
+      setAllPlats((current) => [...current.filter((plat) => plat.id !== createdPlat.id), createdPlat]);
+      event.currentTarget.reset();
+      notify("Plat ajoute.");
+    } catch (error) {
+      setRestaurantAdminError(error instanceof Error ? error.message : "Creation du plat impossible.");
+    }
+  }
+
+  async function handleUpdatePlat(platId: number, event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!ownerRestaurant || !token) return;
+
+    setRestaurantAdminError("");
+    const form = new FormData(event.currentTarget);
+    const payload = {
+      nom: String(form.get("nom") || "").trim(),
+      prix: Number(form.get("prix") || 0),
+      description: String(form.get("description") || "").trim() || null,
+      ingredients: String(form.get("ingredients") || "").trim() || null,
+      allergenes: String(form.get("allergenes") || "").trim() || null,
+      image_url: String(form.get("image_url") || "").trim() || null,
+      is_available: form.get("is_available") === "on",
+      restaurant_id: ownerRestaurant.id,
+    };
+
+    try {
+      const response = await fetch(`${API_URL}/plats/${platId}`, {
+        method: "PATCH",
+        headers: {
+          ...authHeaders,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+      const updatedPlat = await parseApiResponse<Plat>(response);
+      setOwnerPlats((current) => current.map((plat) => (plat.id === updatedPlat.id ? updatedPlat : plat)));
+      setAllPlats((current) => [...current.filter((plat) => plat.id !== updatedPlat.id), updatedPlat]);
+      notify("Plat mis a jour.");
+    } catch (error) {
+      setRestaurantAdminError(error instanceof Error ? error.message : "Modification du plat impossible.");
+    }
+  }
+
   async function openRestaurant(restaurant: Restaurant) {
+    setShowRestaurantAdminPage(false);
+    setShowOrdersPage(false);
     setSelectedRestaurant(restaurant);
     setLoadingData(true);
     try {
@@ -216,6 +499,8 @@ export default function Home() {
   }
 
   function closeMenu() {
+    setShowRestaurantAdminPage(false);
+    setShowOrdersPage(false);
     setSelectedRestaurant(null);
     setPlats([]);
     setCartOpen(false);
@@ -281,6 +566,7 @@ export default function Home() {
       });
       const order = await parseApiResponse<OrderResponse>(response);
       setConfirmedOrder(order);
+      setUserOrders((current) => [order, ...current.filter((item) => item.id !== order.id)]);
       setCart([]);
       setCartOpen(false);
     } catch (error) {
@@ -296,6 +582,8 @@ export default function Home() {
     setSelectedRestaurant(null);
     setCart([]);
     setPlats([]);
+    setAllPlats([]);
+    setUserOrders([]);
     setCartOpen(false);
   }
 
@@ -399,9 +687,122 @@ export default function Home() {
           <span className="logo">MiamDelivery</span>
         </button>
         <div className="header-right">
-          <div className="user-badge">
-            <span className="user-avatar">{currentUser.username.slice(0, 2).toUpperCase()}</span>
-            <span>{currentUser.username}</span>
+          <div className="user-menu">
+            <button className="user-badge" type="button">
+              <span className="user-avatar">{currentUser.username.slice(0, 2).toUpperCase()}</span>
+              <span>{currentUser.username}</span>
+            </button>
+            <div className="profile-dropdown">
+              <div className="profile-dropdown-header">
+                <strong>Profil</strong>
+                <span>{currentUser.email}</span>
+              </div>
+              <form className="profile-form" onSubmit={handleProfileUpdate}>
+                {profileError && <div className="profile-error">{profileError}</div>}
+                <label>
+                  Nom d&apos;utilisateur
+                  <input name="username" defaultValue={currentUser.username} required />
+                </label>
+                <label>
+                  Email
+                  <input name="email" defaultValue={currentUser.email} type="email" required />
+                </label>
+                <label>
+                  Telephone
+                  <input name="phone" defaultValue={currentUser.phone || ""} />
+                </label>
+                <label>
+                  Adresse
+                  <input name="address" defaultValue={currentUser.address || ""} />
+                </label>
+                <button className="profile-save" disabled={loadingProfile} type="submit">
+                  {loadingProfile ? "Enregistrement..." : "Enregistrer"}
+                </button>
+              </form>
+            </div>
+          </div>
+          <div className="restaurant-menu" onFocus={() => loadOwnerRestaurant()} onMouseEnter={() => loadOwnerRestaurant()}>
+            <button className="restaurant-btn" onClick={openRestaurantAdminPage} type="button">
+              Mon restaurant
+            </button>
+            <div className="restaurant-dropdown">
+              <div className="orders-dropdown-header">
+                <strong>Restaurant</strong>
+                <button onClick={() => loadOwnerRestaurant(true)} type="button">
+                  Actualiser
+                </button>
+              </div>
+              {restaurantAdminError && <div className="profile-error">{restaurantAdminError}</div>}
+              {loadingRestaurantAdmin ? (
+                <p className="orders-muted">Chargement...</p>
+              ) : ownerRestaurant ? (
+                <div className="restaurant-dropdown-card">
+                  <strong>{ownerRestaurant.name}</strong>
+                  <span>{ownerRestaurant.address}</span>
+                  <span className={ownerRestaurant.is_open ? "open-badge" : "closed-badge"}>
+                    {ownerRestaurant.is_open ? "Ouvert" : "Ferme"}
+                  </span>
+                  <button onClick={openRestaurantAdminPage} type="button">
+                    Modifier restaurant et plats
+                  </button>
+                </div>
+              ) : (
+                <div className="restaurant-dropdown-card">
+                  <strong>Aucun restaurant</strong>
+                  <span>Creez votre fiche restaurant pour ajouter vos plats.</span>
+                  <button onClick={openRestaurantAdminPage} type="button">
+                    Creer un restaurant
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="orders-menu" onFocus={() => loadUserOrders()} onMouseEnter={() => loadUserOrders()}>
+            <button className="orders-btn" onClick={openOrdersPage} type="button">
+              {ongoingOrders.length} commande{ongoingOrders.length > 1 ? "s" : ""} en cours
+            </button>
+            <div className="orders-dropdown">
+              <div className="orders-dropdown-header">
+                <strong>Mes commandes</strong>
+                <button onClick={() => loadUserOrders(true)} type="button">
+                  Actualiser
+                </button>
+              </div>
+              {ordersError && <div className="profile-error">{ordersError}</div>}
+              {loadingOrders ? (
+                <p className="orders-muted">Chargement...</p>
+              ) : sortedOrders.length === 0 ? (
+                <p className="orders-muted">Aucune commande pour le moment.</p>
+              ) : (
+                <div className="orders-list">
+                  {sortedOrders.map((order) => {
+                    const isOngoing = !["terminee", "annulee"].includes(order.statut);
+
+                    return (
+                    <article className={`order-card ${isOngoing ? "ongoing" : ""}`} key={order.id}>
+                      <div className="order-card-top">
+                        <strong>Commande #{order.id}</strong>
+                        <span>{formatPrice(order.prix_total)}</span>
+                      </div>
+                      <div className="order-card-meta">
+                        <span>{restaurantName(order.restaurant_id)}</span>
+                        <span>{new Date(order.created_at).toLocaleDateString("fr-FR")}</span>
+                      </div>
+                      <div className="order-card-status">{statusLabel(order.statut)}</div>
+                      <ul className="order-items">
+                        {order.items.map((item) => (
+                          <li key={`${order.id}-${item.plat_id}`}>
+                            <span>{platName(item.plat_id)}</span>
+                            <strong>x{item.quantite}</strong>
+                          </li>
+                        ))}
+                      </ul>
+                    </article>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
           <button className="cart-btn" onClick={() => setCartOpen(true)} type="button">
             Panier
@@ -414,7 +815,221 @@ export default function Home() {
       </header>
 
       <section className="container">
-        {!selectedRestaurant ? (
+        {showRestaurantAdminPage ? (
+          <>
+            <button className="back-btn" onClick={closeMenu} type="button">
+              ← Retour aux restaurants
+            </button>
+            <div className="restaurant-admin-header">
+              <div>
+                <div className="section-title">Mon restaurant</div>
+                <div className="section-subtitle">
+                  Creez ou modifiez votre restaurant, puis gerez les plats proposes.
+                </div>
+              </div>
+              <button className="orders-refresh-main" onClick={() => loadOwnerRestaurant(true)} type="button">
+                Actualiser
+              </button>
+            </div>
+            {restaurantAdminError && <div className="profile-error admin-error">{restaurantAdminError}</div>}
+            <section className="restaurant-admin-grid">
+              <form
+                className="admin-panel admin-form"
+                key={ownerRestaurant?.id || "new-restaurant"}
+                onSubmit={handleRestaurantSave}
+              >
+                <h2>{ownerRestaurant ? "Modifier le restaurant" : "Creer un restaurant"}</h2>
+                <label>
+                  Nom
+                  <input name="name" defaultValue={ownerRestaurant?.name || ""} required />
+                </label>
+                <label>
+                  Adresse
+                  <input name="address" defaultValue={ownerRestaurant?.address || ""} required />
+                </label>
+                <label>
+                  Telephone
+                  <input name="phone" defaultValue={ownerRestaurant?.phone || ""} />
+                </label>
+                <label>
+                  Description
+                  <textarea name="description" defaultValue={ownerRestaurant?.description || ""} rows={3} />
+                </label>
+                <label>
+                  Image
+                  <input name="image_url" defaultValue={ownerRestaurant?.image_url || ""} placeholder="/images/pizza_algo.jpg" />
+                </label>
+                <label className="admin-checkbox">
+                  <input name="is_open" defaultChecked={ownerRestaurant?.is_open ?? true} type="checkbox" />
+                  Restaurant ouvert
+                </label>
+                <button className="profile-save" disabled={loadingRestaurantAdmin} type="submit">
+                  {loadingRestaurantAdmin ? "Enregistrement..." : ownerRestaurant ? "Enregistrer" : "Creer"}
+                </button>
+              </form>
+
+              <div className="admin-panel">
+                <h2>Ajouter un plat</h2>
+                {!ownerRestaurant ? (
+                  <p className="orders-muted">Creez d&apos;abord un restaurant pour ajouter des plats.</p>
+                ) : (
+                  <form className="admin-form" onSubmit={handleCreatePlat}>
+                    <label>
+                      Nom
+                      <input name="nom" required />
+                    </label>
+                    <label>
+                      Prix
+                      <input min="0" name="prix" required step="0.01" type="number" />
+                    </label>
+                    <label>
+                      Description
+                      <textarea name="description" rows={2} />
+                    </label>
+                    <label>
+                      Ingredients
+                      <input name="ingredients" />
+                    </label>
+                    <label>
+                      Allergenes
+                      <input name="allergenes" />
+                    </label>
+                    <label>
+                      Image
+                      <input name="image_url" placeholder="/images/burger.jpg" />
+                    </label>
+                    <label className="admin-checkbox">
+                      <input name="is_available" defaultChecked type="checkbox" />
+                      Disponible
+                    </label>
+                    <button className="profile-save" type="submit">
+                      Ajouter le plat
+                    </button>
+                  </form>
+                )}
+              </div>
+            </section>
+
+            {ownerRestaurant && (
+              <section className="admin-panel plats-admin-panel">
+                <h2>Plats du restaurant</h2>
+                {ownerPlats.length === 0 ? (
+                  <p className="orders-muted">Aucun plat pour le moment.</p>
+                ) : (
+                  <div className="plats-admin-list">
+                    {ownerPlats.map((plat) => (
+                      <form
+                        className="plat-admin-card"
+                        key={plat.id}
+                        onSubmit={(event) => handleUpdatePlat(plat.id, event)}
+                      >
+                        <Image alt={plat.nom} className="plat-admin-img" height={88} src={imageSrc(plat.image_url)} width={88} />
+                        <div className="plat-admin-fields">
+                          <label>
+                            Nom
+                            <input name="nom" defaultValue={plat.nom} required />
+                          </label>
+                          <label>
+                            Prix
+                            <input min="0" name="prix" defaultValue={plat.prix} required step="0.01" type="number" />
+                          </label>
+                          <label>
+                            Description
+                            <input name="description" defaultValue={plat.description || ""} />
+                          </label>
+                          <label>
+                            Ingredients
+                            <input name="ingredients" defaultValue={plat.ingredients || ""} />
+                          </label>
+                          <label>
+                            Allergenes
+                            <input name="allergenes" defaultValue={plat.allergenes || ""} />
+                          </label>
+                          <label>
+                            Image
+                            <input name="image_url" defaultValue={plat.image_url || ""} />
+                          </label>
+                          <label className="admin-checkbox">
+                            <input name="is_available" defaultChecked={plat.is_available} type="checkbox" />
+                            Disponible
+                          </label>
+                          <button className="profile-save" type="submit">
+                            Enregistrer ce plat
+                          </button>
+                        </div>
+                      </form>
+                    ))}
+                  </div>
+                )}
+              </section>
+            )}
+          </>
+        ) : showOrdersPage ? (
+          <>
+            <button className="back-btn" onClick={closeMenu} type="button">
+              ← Retour aux restaurants
+            </button>
+            <div className="orders-page-header">
+              <div>
+                <div className="section-title">Mes commandes</div>
+                <div className="section-subtitle">
+                  {ongoingOrders.length} commande{ongoingOrders.length > 1 ? "s" : ""} en cours
+                </div>
+              </div>
+              <button className="orders-refresh-main" onClick={() => loadUserOrders(true)} type="button">
+                Actualiser
+              </button>
+            </div>
+            {ordersError && <div className="profile-error">{ordersError}</div>}
+            {loadingOrders ? (
+              <p className="muted">Chargement des commandes...</p>
+            ) : sortedOrders.length === 0 ? (
+              <div className="orders-empty-state">
+                <h2>Aucune commande</h2>
+                <p>Vos futures commandes apparaitront ici.</p>
+              </div>
+            ) : (
+              <div className="orders-page-list">
+                {sortedOrders.map((order) => {
+                  const isOngoing = !["terminee", "annulee"].includes(order.statut);
+
+                  return (
+                    <article className={`orders-page-card ${isOngoing ? "ongoing" : ""}`} key={order.id}>
+                      <div className="orders-page-card-main">
+                        <div>
+                          <div className="orders-page-title">
+                            Commande #{order.id}
+                            {isOngoing && <span>En cours</span>}
+                          </div>
+                          <div className="order-card-meta">
+                            <span>{restaurantName(order.restaurant_id)}</span>
+                            <span>
+                              {new Date(order.created_at).toLocaleDateString("fr-FR")} ·{" "}
+                              {new Date(order.created_at).toLocaleTimeString("fr-FR", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </span>
+                          </div>
+                        </div>
+                        <strong>{formatPrice(order.prix_total)}</strong>
+                      </div>
+                      <div className="order-card-status">{statusLabel(order.statut)}</div>
+                      <ul className="order-items page">
+                        {order.items.map((item) => (
+                          <li key={`${order.id}-${item.plat_id}`}>
+                            <span>{platName(item.plat_id)}</span>
+                            <strong>x{item.quantite}</strong>
+                          </li>
+                        ))}
+                      </ul>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+          </>
+        ) : !selectedRestaurant ? (
           <>
             <div className="section-title">A la une</div>
             <div className="section-subtitle">Les meilleurs restos pres de chez vous</div>

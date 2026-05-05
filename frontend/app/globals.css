@@ -328,12 +328,560 @@ button {
 .user-badge {
   align-items: center;
   background: var(--gray-100);
+  border: 0;
   border-radius: 20px;
+  cursor: pointer;
   display: flex;
   font-size: 14px;
   font-weight: 500;
   gap: 8px;
   padding: 8px 14px;
+}
+
+.user-menu {
+  position: relative;
+}
+
+.profile-dropdown {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: 12px;
+  box-shadow: 0 18px 48px rgb(0 0 0 / 14%);
+  opacity: 0;
+  padding: 16px;
+  pointer-events: none;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  transform: translateY(-6px);
+  transition: opacity 0.18s, transform 0.18s;
+  width: min(330px, calc(100vw - 32px));
+  z-index: 500;
+}
+
+.user-menu:hover .profile-dropdown,
+.user-menu:focus-within .profile-dropdown {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.profile-dropdown::before {
+  content: "";
+  height: 12px;
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: -12px;
+}
+
+.profile-dropdown-header {
+  border-bottom: 1px solid var(--gray-200);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+}
+
+.profile-dropdown-header strong {
+  font-family: Syne, Arial, Helvetica, sans-serif;
+  font-size: 16px;
+}
+
+.profile-dropdown-header span {
+  color: var(--gray-600);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.profile-form label {
+  color: var(--gray-600);
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+  font-weight: 600;
+  gap: 5px;
+}
+
+.profile-form input {
+  background: var(--gray-100);
+  border: 1.5px solid var(--gray-200);
+  border-radius: 9px;
+  color: var(--black);
+  outline: none;
+  padding: 10px 12px;
+}
+
+.profile-form input:focus {
+  background: var(--white);
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px rgb(6 193 103 / 10%);
+}
+
+.profile-error {
+  background: #fff0f0;
+  border: 1px solid #ffd0d0;
+  border-radius: 8px;
+  color: #c0392b;
+  font-size: 12px;
+  padding: 8px 10px;
+}
+
+.profile-save {
+  background: var(--green);
+  border: 0;
+  border-radius: 9px;
+  color: var(--white);
+  cursor: pointer;
+  font-weight: 800;
+  margin-top: 4px;
+  padding: 11px 12px;
+}
+
+.profile-save:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.restaurant-menu,
+.orders-menu {
+  position: relative;
+}
+
+.restaurant-btn,
+.orders-btn {
+  align-items: center;
+  background: var(--gray-100);
+  border: 0;
+  border-radius: 20px;
+  cursor: pointer;
+  display: flex;
+  font-weight: 700;
+  gap: 8px;
+  padding: 10px 16px;
+}
+
+.restaurant-btn {
+  background: var(--black);
+  color: var(--white);
+}
+
+.orders-count {
+  align-items: center;
+  background: var(--green);
+  border-radius: 50%;
+  color: var(--white);
+  display: flex;
+  font-size: 11px;
+  font-weight: 800;
+  height: 20px;
+  justify-content: center;
+  min-width: 20px;
+  padding: 0 6px;
+}
+
+.restaurant-dropdown,
+.orders-dropdown {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: 12px;
+  box-shadow: 0 18px 48px rgb(0 0 0 / 14%);
+  max-height: min(560px, calc(100vh - 92px));
+  opacity: 0;
+  overflow: hidden;
+  padding: 16px;
+  pointer-events: none;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  transform: translateY(-6px);
+  transition: opacity 0.18s, transform 0.18s;
+  width: min(410px, calc(100vw - 32px));
+  z-index: 500;
+}
+
+.restaurant-dropdown {
+  width: min(320px, calc(100vw - 32px));
+}
+
+.restaurant-menu:hover .restaurant-dropdown,
+.restaurant-menu:focus-within .restaurant-dropdown,
+.orders-menu:hover .orders-dropdown,
+.orders-menu:focus-within .orders-dropdown {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.restaurant-dropdown::before,
+.orders-dropdown::before {
+  content: "";
+  height: 12px;
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: -12px;
+}
+
+.restaurant-dropdown-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.restaurant-dropdown-card strong {
+  font-family: Syne, Arial, Helvetica, sans-serif;
+  font-size: 17px;
+}
+
+.restaurant-dropdown-card > span:not(.open-badge, .closed-badge) {
+  color: var(--gray-600);
+  font-size: 13px;
+}
+
+.restaurant-dropdown-card .open-badge,
+.restaurant-dropdown-card .closed-badge {
+  width: fit-content;
+}
+
+.restaurant-dropdown-card button {
+  background: var(--green);
+  border: 0;
+  border-radius: 9px;
+  color: var(--white);
+  cursor: pointer;
+  font-weight: 800;
+  margin-top: 4px;
+  padding: 11px 12px;
+}
+
+.orders-dropdown-header {
+  align-items: center;
+  border-bottom: 1px solid var(--gray-200);
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+}
+
+.orders-dropdown-header strong {
+  font-family: Syne, Arial, Helvetica, sans-serif;
+  font-size: 16px;
+}
+
+.orders-dropdown-header button {
+  background: transparent;
+  border: 1px solid var(--gray-200);
+  border-radius: 16px;
+  color: var(--gray-600);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 6px 10px;
+}
+
+.orders-muted {
+  color: var(--gray-600);
+  font-size: 13px;
+  padding: 14px 2px 2px;
+}
+
+.orders-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 440px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.order-card {
+  background: var(--gray-100);
+  border: 1px solid var(--gray-200);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.order-card.ongoing {
+  background: var(--green-light);
+  border-color: #b2f0d0;
+}
+
+.order-card-top,
+.order-card-meta,
+.order-items li {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.order-card-top strong {
+  font-family: Syne, Arial, Helvetica, sans-serif;
+  font-size: 14px;
+}
+
+.order-card-top span {
+  font-weight: 800;
+}
+
+.order-card-meta {
+  color: var(--gray-600);
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.order-card-status {
+  background: var(--green-light);
+  border-radius: 8px;
+  color: var(--green-dark);
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 800;
+  margin-top: 10px;
+  padding: 4px 8px;
+}
+
+.order-items {
+  border-top: 1px solid var(--gray-200);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  list-style: none;
+  margin-top: 10px;
+  padding-top: 10px;
+}
+
+.order-items li {
+  color: var(--gray-600);
+  font-size: 13px;
+}
+
+.order-items strong {
+  color: var(--black);
+}
+
+.orders-page-header {
+  align-items: flex-start;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.orders-refresh-main {
+  background: var(--black);
+  border: 0;
+  border-radius: 20px;
+  color: var(--white);
+  cursor: pointer;
+  font-weight: 700;
+  padding: 10px 16px;
+}
+
+.orders-empty-state {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 32px;
+}
+
+.orders-empty-state h2 {
+  font-family: Syne, Arial, Helvetica, sans-serif;
+  font-size: 20px;
+  margin-bottom: 6px;
+}
+
+.orders-empty-state p {
+  color: var(--gray-600);
+}
+
+.orders-page-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.orders-page-card {
+  background: var(--white);
+  border: 1.5px solid var(--gray-200);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 18px;
+}
+
+.orders-page-card.ongoing {
+  border-color: var(--green);
+  box-shadow: 0 8px 28px rgb(6 193 103 / 14%);
+}
+
+.orders-page-card-main {
+  align-items: flex-start;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.orders-page-card-main > strong {
+  font-family: Syne, Arial, Helvetica, sans-serif;
+  font-size: 18px;
+  white-space: nowrap;
+}
+
+.orders-page-title {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  font-family: Syne, Arial, Helvetica, sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+  gap: 8px;
+}
+
+.orders-page-title span {
+  background: var(--green);
+  border-radius: 999px;
+  color: var(--white);
+  font-family: "DM Sans", Arial, Helvetica, sans-serif;
+  font-size: 11px;
+  padding: 4px 8px;
+}
+
+.order-items.page {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.restaurant-admin-header {
+  align-items: flex-start;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.admin-error {
+  margin-bottom: 16px;
+}
+
+.restaurant-admin-grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: 18px;
+}
+
+.admin-panel {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 20px;
+}
+
+.admin-panel h2 {
+  font-family: Syne, Arial, Helvetica, sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+  margin-bottom: 14px;
+}
+
+.admin-form,
+.plat-admin-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.admin-form label,
+.plat-admin-fields label {
+  color: var(--gray-600);
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+  font-weight: 700;
+  gap: 6px;
+}
+
+.admin-form input,
+.admin-form textarea,
+.plat-admin-fields input {
+  background: var(--gray-100);
+  border: 1.5px solid var(--gray-200);
+  border-radius: 10px;
+  color: var(--black);
+  outline: none;
+  padding: 11px 12px;
+}
+
+.admin-form textarea {
+  resize: vertical;
+}
+
+.admin-form input:focus,
+.admin-form textarea:focus,
+.plat-admin-fields input:focus {
+  background: var(--white);
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px rgb(6 193 103 / 10%);
+}
+
+.admin-checkbox {
+  align-items: center;
+  flex-direction: row !important;
+  gap: 10px !important;
+}
+
+.admin-checkbox input {
+  height: 16px;
+  width: 16px;
+}
+
+.plats-admin-panel {
+  margin-top: 18px;
+}
+
+.plats-admin-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.plat-admin-card {
+  align-items: flex-start;
+  background: var(--gray-100);
+  border: 1px solid var(--gray-200);
+  border-radius: 12px;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: 88px 1fr;
+  padding: 14px;
+}
+
+.plat-admin-img {
+  border-radius: 10px;
+  object-fit: cover;
+}
+
+.plat-admin-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.plat-admin-fields label:nth-child(3),
+.plat-admin-fields label:nth-child(6),
+.plat-admin-fields .admin-checkbox,
+.plat-admin-fields button {
+  grid-column: 1 / -1;
 }
 
 .user-avatar,
