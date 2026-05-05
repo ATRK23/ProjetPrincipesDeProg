@@ -22,6 +22,7 @@ def create_restaurant(db: Session, restaurant: RestaurantCreate, owner_id: int |
         address=restaurant.address,
         phone=restaurant.phone,
         description=restaurant.description,
+        image_url=restaurant.image_url,
         is_open=restaurant.is_open,
         owner_id=owner_id
     )

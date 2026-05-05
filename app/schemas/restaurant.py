@@ -9,6 +9,7 @@ class RestaurantBase(BaseModel):
     address: str
     phone: Optional[str] = None
     description: Optional[str] = None
+    image_url: Optional[str] = None
     is_open: bool = True
     
 
@@ -21,6 +22,7 @@ class RestaurantUpdate(BaseModel):
     address: Optional[str] = None
     phone: Optional[str] = None
     description: Optional[str] = None
+    image_url: Optional[str] = None
     is_open: Optional[bool] = None
     
 

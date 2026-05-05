@@ -11,6 +11,7 @@ class Restaurant(Base):
     address = Column(String(255), nullable=False)
     phone = Column(String(30), nullable=True)
     description = Column(String(500), nullable=True)
+    image_url = Column(String(255), nullable=True)
     is_open = Column(Boolean, default=True, nullable=False)
     owner_id = Column(Integer, ForeignKey("users.id"), nullable=True)
 
