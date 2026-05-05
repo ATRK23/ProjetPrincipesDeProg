@@ -31,6 +31,7 @@ def create_plat(db: Session, plat: PlatCreate):
         description=plat.description,
         ingredients=plat.ingredients,
         allergenes=plat.allergenes,
+        image_url=plat.image_url,
         is_available=plat.is_available,
         restaurant_id=plat.restaurant_id
     )

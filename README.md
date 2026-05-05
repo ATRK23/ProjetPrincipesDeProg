@@ -1,3 +1,10 @@
+# Liens rapides 
+
+- API : http://127.0.0.1:8000
+- Frontend Next.js : http://127.0.0.1:4000
+- Swagger : http://127.0.0.1:8000/docs
+- OpenAPI JSON : http://127.0.0.1:8000/openapi.json
+
 # Restaurant API - SAE Developpement et Deploiement d'une API RESTful
 
 API REST de gestion de restaurants, plats, utilisateurs, commandes et livraisons. Le projet repond a l'enonce de SAE : backend REST, persistance relationnelle, ORM, relations entre entites, conteneurisation Docker, orchestration Docker Compose, migrations, documentation et tests automatises.
@@ -63,6 +70,7 @@ Le projet couvre aussi les besoins des restaurateurs et des livreurs :
 | Validation | Pydantic |
 | Authentification | JWT avec `python-jose`, hash avec `passlib`/bcrypt |
 | Tests | pytest, FastAPI TestClient, SQLite en memoire pour les tests |
+| Frontend | Next.js |
 | Conteneurisation | Docker et Docker Compose |
 
 ## Respect de l'enonce
@@ -127,7 +135,7 @@ Entites principales :
 - `Plat` : plat vendu par un restaurant.
 - `Commande` : commande passee par un utilisateur dans un restaurant.
 - `Livreur` : profil de livraison rattache a un utilisateur.
-- `commande_plat` : table d'association entre commandes et plats.
+- `commande_plat` : table d'association entre commandes et plats, avec quantite commandee.
 
 Relations implementees :
 
@@ -138,14 +146,14 @@ User 1 -> 0..n Commande
 Restaurant 1 -> 0..n Plat
 Restaurant 1 -> 0..n Commande
 Livreur 1 -> 0..n Commande
-Commande n -> n Plat
+Commande n -> n Plat, avec quantite par ligne de commande
 ```
 
 Correspondance avec les contraintes de relations :
 
 - Relation 1-1 : `User` -> `Livreur`, grace a `livreurs.user_id` unique.
 - Relations 1-n : `Restaurant` -> `Plat`, `User` -> `Commande`, `Restaurant` -> `Commande`, `Livreur` -> `Commande`.
-- Relation n-n : `Commande` <-> `Plat`, via la table d'association `commande_plat`.
+- Relation n-n : `Commande` <-> `Plat`, via la table d'association `commande_plat` et sa colonne `quantite`.
 
 ## Installation avec Docker Compose
 
@@ -183,6 +191,7 @@ docker compose logs -f api
 L'API est disponible ici :
 
 - API : http://127.0.0.1:8000
+- Frontend Next.js : http://127.0.0.1:4000
 - Swagger : http://127.0.0.1:8000/docs
 - OpenAPI JSON : http://127.0.0.1:8000/openapi.json
 
@@ -434,6 +443,7 @@ curl -X POST http://127.0.0.1:8000/restaurants/ \
     "address": "12 rue de Paris",
     "phone": "0102030405",
     "description": "Cuisine maison",
+    "image_url": "/images/bistro_du_code.jpg",
     "is_open": true
   }'
 ```
@@ -450,6 +460,7 @@ curl -X POST http://127.0.0.1:8000/plats/ \
     "description": "Pain artisanal, steak et cheddar",
     "ingredients": "Pain, boeuf, cheddar, salade",
     "allergenes": "gluten, lactose",
+    "image_url": "/images/burger.jpg",
     "is_available": true,
     "restaurant_id": 1
   }'
@@ -464,7 +475,10 @@ curl -X POST http://127.0.0.1:8000/commandes/ \
   -d '{
     "user_id": 2,
     "restaurant_id": 1,
-    "plat_ids": [1, 2]
+    "items": [
+      {"plat_id": 1, "quantite": 2},
+      {"plat_id": 2, "quantite": 1}
+    ]
   }'
 ```
 
@@ -478,9 +492,12 @@ Reponse type :
   "livreur_id": null,
   "statut": "en_attente",
   "statut_livraison": "non_assignee",
-  "prix_total": 22.5,
+  "prix_total": 35.0,
   "created_at": "2026-05-04T10:00:00Z",
-  "plat_ids": [1, 2]
+  "items": [
+    {"plat_id": 1, "quantite": 2},
+    {"plat_id": 2, "quantite": 1}
+  ]
 }
 ```
 
@@ -595,6 +612,9 @@ Les valeurs par defaut sont definies dans `.env_example`.
 | `POSTGRES_DB` | Nom de la base | `restaurant_db` |
 | `POSTGRES_PORT` | Port PostgreSQL expose sur l'hote | `5433` |
 | `API_PORT` | Port API expose sur l'hote | `8000` |
+| `FRONTEND_PORT` | Port frontend Next.js expose sur l'hote | `4000` |
+| `NEXT_PUBLIC_API_URL` | URL API appelee par le navigateur depuis Next.js | `http://127.0.0.1:8000` |
+| `CORS_ORIGINS` | Origines navigateur autorisees par FastAPI | `http://127.0.0.1:8000,http://localhost:8000,http://127.0.0.1:4000,http://localhost:4000` |
 | `DATABASE_URL` | URL SQLAlchemy de connexion a la base | `postgresql://postgres:postgres@db:5432/restaurant_db` |
 | `SECRET_KEY` | Cle de signature JWT | `change_me_in_env_file` |
 | `ALGORITHM` | Algorithme JWT | `HS256` |

@@ -13,13 +13,21 @@ class Plat(Base):
     description = Column(Text, nullable=True)
     ingredients = Column(Text, nullable=True)
     allergenes = Column(Text, nullable=True)
+    image_url = Column(String(255), nullable=True)
     is_available = Column(Boolean, default=True, nullable=False)
 
     restaurant_id = Column(Integer, ForeignKey("restaurants.id"), nullable=False)
     restaurant = relationship("Restaurant", back_populates="plats")
     
+    commande_items = relationship(
+        "CommandePlat",
+        back_populates="plat",
+        cascade="all, delete-orphan",
+    )
+
     commandes = relationship(
         "Commande",
         secondary="commande_plat",
-        back_populates="plats"
+        back_populates="plats",
+        viewonly=True,
     )

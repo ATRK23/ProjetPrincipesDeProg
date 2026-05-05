@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.schemas.command import CommandeCreate, CommandeLivraisonStatusUpdate, CommandeUpdate, CommandeResponse
+from app.schemas.command import CommandeCreate, CommandeItem, CommandeLivraisonStatusUpdate, CommandeUpdate, CommandeResponse
 from app.schemas.livreur import LivreurResponse
 from app.crud import command as commande_crud
 from app.crud import livreur as livreur_crud
@@ -29,7 +29,10 @@ def format_commande_response(commande):
         statut_livraison=commande.statut_livraison,
         prix_total=commande.prix_total,
         created_at=commande.created_at,
-        plat_ids=[plat.id for plat in commande.plats]
+        items=[
+            CommandeItem(plat_id=item.plat_id, quantite=item.quantite)
+            for item in sorted(commande.items, key=lambda item: item.plat_id)
+        ],
     )
 
 
@@ -126,7 +129,7 @@ def validate_commande_data(
     db: Session,
     user_id: int,
     restaurant_id: int,
-    plat_ids: List[int]
+    items: List[CommandeItem]
 ):
     user = user_crud.get_user(db, user_id)
 
@@ -144,9 +147,17 @@ def validate_commande_data(
             detail="Restaurant introuvable"
         )
 
+    plat_ids = [item.plat_id for item in items]
+
+    if len(plat_ids) != len(set(plat_ids)):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Un plat ne doit apparaître qu'une seule fois dans une commande"
+        )
+
     plats = commande_crud.get_plats_by_ids(db, plat_ids)
 
-    if len(plats) != len(set(plat_ids)):
+    if len(plats) != len(plat_ids):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Un ou plusieurs plats sont introuvables"
@@ -157,6 +168,12 @@ def validate_commande_data(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Tous les plats doivent appartenir au restaurant de la commande"
+            )
+
+        if not plat.is_available:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Un ou plusieurs plats ne sont pas disponibles"
             )
 
     return plats
@@ -170,7 +187,7 @@ def create_commande(commande: CommandeCreate, db: Session = Depends(get_db), cur
         db,
         commande.user_id,
         commande.restaurant_id,
-        commande.plat_ids
+        commande.items
     )
 
     db_commande = commande_crud.create_commande(db, commande)
@@ -325,12 +342,12 @@ def update_commande(commande_id: int, commande_update: CommandeUpdate, db: Sessi
     if commande_update.statut is not None:
         check_commande_status_transition(db_commande.statut, commande_update.statut)
 
-    if commande_update.plat_ids is not None:
+    if commande_update.items is not None:
         validate_commande_data(
             db,
             db_commande.user_id,
             db_commande.restaurant_id,
-            commande_update.plat_ids
+            commande_update.items
         )
 
     updated_commande = commande_crud.update_commande(

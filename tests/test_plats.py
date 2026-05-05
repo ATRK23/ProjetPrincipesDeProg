@@ -96,6 +96,7 @@ def create_plat_in_db(
     description="Pain artisanal et sauce maison",
     ingredients="Pain, steak, cheddar",
     allergenes="gluten, lactose",
+    image_url="/images/burger.jpg",
     is_available=True,
 ):
     plat = Plat(
@@ -104,6 +105,7 @@ def create_plat_in_db(
         description=description,
         ingredients=ingredients,
         allergenes=allergenes,
+        image_url=image_url,
         is_available=is_available,
         restaurant_id=restaurant_id,
     )
@@ -120,6 +122,7 @@ def plat_payload(
     description="Pain artisanal et sauce maison",
     ingredients="Pain, steak, cheddar",
     allergenes="gluten, lactose",
+    image_url="/images/burger.jpg",
     is_available=True,
 ):
     return {
@@ -128,6 +131,7 @@ def plat_payload(
         "description": description,
         "ingredients": ingredients,
         "allergenes": allergenes,
+        "image_url": image_url,
         "is_available": is_available,
         "restaurant_id": restaurant_id,
     }
@@ -174,6 +178,7 @@ def test_owner_can_create_plat_for_own_restaurant(client, db_session):
     assert data["description"] == "Pain artisanal et sauce maison"
     assert data["ingredients"] == "Pain, steak, cheddar"
     assert data["allergenes"] == "gluten, lactose"
+    assert data["image_url"] == "/images/burger.jpg"
     assert data["is_available"] is True
     assert data["restaurant_id"] == restaurant.id
 
