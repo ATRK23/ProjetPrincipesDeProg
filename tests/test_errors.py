@@ -6,7 +6,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.database import Base, get_db
 from app.main import app
-from app.models import Commande, Plat, Restaurant, User
+from app.models import Commande, CommandePlat, Plat, Restaurant, User
 from app.security import hash_password
 
 
@@ -108,7 +108,7 @@ def create_commande_in_db(db_session, user_id, restaurant_id, plats):
         statut="en_attente",
         statut_livraison="non_assignee",
         prix_total=sum(plat.prix for plat in plats),
-        plats=plats,
+        items=[CommandePlat(plat=plat, quantite=1) for plat in plats],
     )
     db_session.add(commande)
     db_session.commit()
@@ -285,7 +285,10 @@ def test_400_commande_with_plat_from_another_restaurant(client, db_session):
         json={
             "user_id": user.id,
             "restaurant_id": restaurant.id,
-            "plat_ids": [valid_plat.id, invalid_plat.id],
+            "items": [
+                {"plat_id": valid_plat.id, "quantite": 1},
+                {"plat_id": invalid_plat.id, "quantite": 1},
+            ],
         },
         headers=headers,
     )

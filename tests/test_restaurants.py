@@ -55,6 +55,7 @@ def restaurant_payload(
     address="12 rue de Paris",
     phone="0102030405",
     description="Cuisine maison",
+    image_url="/images/bistro_du_code.jpg",
     is_open=True,
 ):
     return {
@@ -62,6 +63,7 @@ def restaurant_payload(
         "address": address,
         "phone": phone,
         "description": description,
+        "image_url": image_url,
         "is_open": is_open,
     }
 
@@ -92,6 +94,7 @@ def create_restaurant_in_db(
     address="12 rue de Paris",
     phone="0102030405",
     description="Cuisine maison",
+    image_url="/images/bistro_du_code.jpg",
     is_open=True,
 ):
     restaurant = Restaurant(
@@ -99,6 +102,7 @@ def create_restaurant_in_db(
         address=address,
         phone=phone,
         description=description,
+        image_url=image_url,
         is_open=is_open,
         owner_id=owner_id,
     )
@@ -145,6 +149,7 @@ def test_authenticated_user_can_create_restaurant_and_becomes_owner(client, db_s
     assert data["address"] == "12 rue de Paris"
     assert data["phone"] == "0102030405"
     assert data["description"] == "Cuisine maison"
+    assert data["image_url"] == "/images/bistro_du_code.jpg"
     assert data["is_open"] is True
     assert data["owner_id"] == user.id
 

@@ -4,7 +4,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.database import Base
-from app.models import Commande, Livreur, Plat, Restaurant, User
+from app.models import Commande, CommandePlat, Livreur, Plat, Restaurant, User
 from app.models.command import commande_plat
 from app.security import hash_password
 
@@ -110,7 +110,7 @@ def create_commande(
         statut="en_attente",
         statut_livraison="non_assignee",
         prix_total=sum(plat.prix for plat in plats),
-        plats=plats,
+        items=[CommandePlat(plat=plat, quantite=1) for plat in plats],
     )
     db_session.add(commande)
     db_session.commit()
@@ -278,9 +278,9 @@ def test_commande_plat_association_table_contains_pairs(db_session):
 
     rows = db_session.execute(commande_plat.select()).all()
 
-    assert {(row.commande_id, row.plat_id) for row in rows} == {
-        (commande.id, burger.id),
-        (commande.id, fries.id),
+    assert {(row.commande_id, row.plat_id, row.quantite) for row in rows} == {
+        (commande.id, burger.id, 1),
+        (commande.id, fries.id, 1),
     }
 
 

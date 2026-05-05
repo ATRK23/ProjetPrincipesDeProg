@@ -202,7 +202,10 @@ def test_complete_command_workflow_from_order_to_delivery(client, db_session):
         json={
             "user_id": customer.id,
             "restaurant_id": restaurant["id"],
-            "plat_ids": [burger["id"], fries["id"]],
+            "items": [
+                {"plat_id": burger["id"], "quantite": 2},
+                {"plat_id": fries["id"], "quantite": 1},
+            ],
         },
         headers=customer_headers,
     )
@@ -210,8 +213,11 @@ def test_complete_command_workflow_from_order_to_delivery(client, db_session):
     commande = create_response.json()
     assert commande["statut"] == "en_attente"
     assert commande["statut_livraison"] == "non_assignee"
-    assert commande["prix_total"] == 16.5
-    assert set(commande["plat_ids"]) == {burger["id"], fries["id"]}
+    assert commande["prix_total"] == 29.0
+    assert commande["items"] == [
+        {"plat_id": burger["id"], "quantite": 2},
+        {"plat_id": fries["id"], "quantite": 1},
+    ]
 
     customer_view = client.get(f"/commandes/{commande['id']}", headers=customer_headers)
     assert customer_view.status_code == 200
@@ -332,7 +338,7 @@ def test_command_workflow_blocks_livreur_before_order_is_in_preparation(client, 
         json={
             "user_id": customer.id,
             "restaurant_id": restaurant["id"],
-            "plat_ids": [plat["id"]],
+            "items": [{"plat_id": plat["id"], "quantite": 1}],
         },
         headers=customer_headers,
     )

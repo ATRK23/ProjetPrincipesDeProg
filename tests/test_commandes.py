@@ -6,7 +6,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.database import Base, get_db
 from app.main import app
-from app.models import Commande, Livreur, Plat, Restaurant, User
+from app.models import Commande, CommandePlat, Livreur, Plat, Restaurant, User
 from app.security import hash_password
 
 
@@ -84,14 +84,20 @@ def create_restaurant_in_db(db_session, owner_id=None, name="Le Bon Plat"):
     return restaurant
 
 
-def create_plat_in_db(db_session, restaurant_id, nom="Burger maison", prix=12.5):
+def create_plat_in_db(
+    db_session,
+    restaurant_id,
+    nom="Burger maison",
+    prix=12.5,
+    is_available=True,
+):
     plat = Plat(
         nom=nom,
         prix=prix,
         description="Pain artisanal et sauce maison",
         ingredients="Pain, steak, cheddar",
         allergenes="gluten, lactose",
-        is_available=True,
+        is_available=is_available,
         restaurant_id=restaurant_id,
     )
     db_session.add(plat)
@@ -130,7 +136,7 @@ def create_commande_in_db(
         statut=statut,
         statut_livraison=statut_livraison,
         prix_total=sum(plat.prix for plat in plats),
-        plats=plats,
+        items=[CommandePlat(plat=plat, quantite=1) for plat in plats],
     )
     db_session.add(commande)
     db_session.commit()
@@ -156,7 +162,7 @@ def commande_payload(user_id, restaurant_id, plat_ids):
     return {
         "user_id": user_id,
         "restaurant_id": restaurant_id,
-        "plat_ids": plat_ids,
+        "items": [{"plat_id": plat_id, "quantite": 1} for plat_id in plat_ids],
     }
 
 
@@ -228,8 +234,60 @@ def test_user_can_create_own_commande_and_total_is_calculated(client, db_session
     assert data["statut"] == "en_attente"
     assert data["statut_livraison"] == "non_assignee"
     assert data["prix_total"] == 16.5
-    assert set(data["plat_ids"]) == {plat.id for plat in context["plats"]}
+    assert {item["plat_id"] for item in data["items"]} == {plat.id for plat in context["plats"]}
+    assert all(item["quantite"] == 1 for item in data["items"])
     assert data["created_at"]
+
+
+def test_create_commande_preserves_quantities_and_calculates_total(client, db_session):
+    context = seed_order_context(db_session)
+    headers = auth_headers(client, context["client"].email, context["client_password"])
+
+    response = client.post(
+        "/commandes/",
+        json={
+            "user_id": context["client"].id,
+            "restaurant_id": context["restaurant"].id,
+            "items": [
+                {"plat_id": context["plats"][0].id, "quantite": 2},
+                {"plat_id": context["plats"][1].id, "quantite": 3},
+            ],
+        },
+        headers=headers,
+    )
+
+    assert response.status_code == 201
+    data = response.json()
+    assert data["prix_total"] == 37.0
+    assert data["items"] == [
+        {"plat_id": context["plats"][0].id, "quantite": 2},
+        {"plat_id": context["plats"][1].id, "quantite": 3},
+    ]
+
+
+def test_create_commande_rejects_unavailable_plat(client, db_session):
+    context = seed_order_context(db_session)
+    unavailable_plat = create_plat_in_db(
+        db_session,
+        context["restaurant"].id,
+        nom="Dessert indisponible",
+        prix=6.0,
+        is_available=False,
+    )
+    headers = auth_headers(client, context["client"].email, context["client_password"])
+
+    response = client.post(
+        "/commandes/",
+        json=commande_payload(
+            context["client"].id,
+            context["restaurant"].id,
+            [unavailable_plat.id],
+        ),
+        headers=headers,
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Un ou plusieurs plats ne sont pas disponibles"
 
 
 def test_user_cannot_create_commande_for_another_user(client, db_session):
@@ -692,7 +750,10 @@ def test_restaurant_owner_can_update_commande_status_and_plats(client, db_sessio
         f"/commandes/{commande.id}",
         json={
             "statut": "acceptee",
-            "plat_ids": [plat.id for plat in context["plats"]],
+            "items": [
+                {"plat_id": context["plats"][0].id, "quantite": 2},
+                {"plat_id": context["plats"][1].id, "quantite": 1},
+            ],
         },
         headers=headers,
     )
@@ -700,8 +761,11 @@ def test_restaurant_owner_can_update_commande_status_and_plats(client, db_sessio
     assert response.status_code == 200
     data = response.json()
     assert data["statut"] == "acceptee"
-    assert data["prix_total"] == 16.5
-    assert set(data["plat_ids"]) == {plat.id for plat in context["plats"]}
+    assert data["prix_total"] == 29.0
+    assert data["items"] == [
+        {"plat_id": context["plats"][0].id, "quantite": 2},
+        {"plat_id": context["plats"][1].id, "quantite": 1},
+    ]
 
 
 def test_update_commande_rejects_invalid_status_transition(client, db_session):
