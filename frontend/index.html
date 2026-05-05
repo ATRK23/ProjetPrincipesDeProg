@@ -288,7 +288,9 @@
 <div class="toast" id="toast"></div>
 
 <script>
-  const API_URL = 'http://127.0.0.1:8000';
+  const API_URL = window.location.protocol.startsWith('http') && !['5500', '5173', '3000'].includes(window.location.port)
+    ? window.location.origin
+    : 'http://127.0.0.1:8000';
   let tousLesPlats = [];
   let currentUser = null;
   let panier = [];

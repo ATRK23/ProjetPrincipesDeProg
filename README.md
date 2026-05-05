@@ -183,6 +183,7 @@ docker compose logs -f api
 L'API est disponible ici :
 
 - API : http://127.0.0.1:8000
+- Frontend : http://127.0.0.1:8000/frontend/
 - Swagger : http://127.0.0.1:8000/docs
 - OpenAPI JSON : http://127.0.0.1:8000/openapi.json
 
