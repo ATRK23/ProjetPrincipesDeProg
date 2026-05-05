@@ -1,3 +1,10 @@
+# Liens rapides 
+
+- API : http://127.0.0.1:8000
+- Frontend Next.js : http://127.0.0.1:4000
+- Swagger : http://127.0.0.1:8000/docs
+- OpenAPI JSON : http://127.0.0.1:8000/openapi.json
+
 # Restaurant API - SAE Developpement et Deploiement d'une API RESTful
 
 API REST de gestion de restaurants, plats, utilisateurs, commandes et livraisons. Le projet repond a l'enonce de SAE : backend REST, persistance relationnelle, ORM, relations entre entites, conteneurisation Docker, orchestration Docker Compose, migrations, documentation et tests automatises.
