@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
@@ -114,6 +114,8 @@ export default function Home() {
   const [profileError, setProfileError] = useState("");
   const [toast, setToast] = useState("");
   const [confirmedOrder, setConfirmedOrder] = useState<OrderResponse | null>(null);
+  const loadingOrdersRef = useRef(false);
+  const ordersLoadedRef = useRef(false);
 
   const authHeaders = useMemo<Record<string, string>>(() => {
     if (!token) return {} as Record<string, string>;
@@ -193,10 +195,11 @@ export default function Home() {
 
   const loadUserOrders = useCallback(
     async (force = false) => {
-      if (!currentUser || !token || loadingOrders) return;
-      if (!force && userOrders.length > 0) return;
+      if (!currentUser || !token || loadingOrdersRef.current) return;
+      if (!force && ordersLoadedRef.current) return;
 
       setOrdersError("");
+      loadingOrdersRef.current = true;
       setLoadingOrders(true);
 
       try {
@@ -208,6 +211,7 @@ export default function Home() {
         ]);
         const orders = await parseApiResponse<OrderResponse[]>(ordersResponse);
         setUserOrders(orders);
+        ordersLoadedRef.current = true;
 
         if (platsResponse) {
           const platsData = await parseApiResponse<Plat[]>(platsResponse);
@@ -216,10 +220,11 @@ export default function Home() {
       } catch (error) {
         setOrdersError(error instanceof Error ? error.message : "Impossible de charger les commandes.");
       } finally {
+        loadingOrdersRef.current = false;
         setLoadingOrders(false);
       }
     },
-    [allPlats.length, authHeaders, currentUser, loadingOrders, token, userOrders.length],
+    [allPlats.length, authHeaders, currentUser, token],
   );
 
   useEffect(() => {
@@ -577,6 +582,8 @@ export default function Home() {
   function logout() {
     sessionStorage.removeItem("token");
     sessionStorage.removeItem("user");
+    loadingOrdersRef.current = false;
+    ordersLoadedRef.current = false;
     setToken(null);
     setCurrentUser(null);
     setSelectedRestaurant(null);
